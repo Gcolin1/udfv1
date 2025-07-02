@@ -1,0 +1,169 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+interface InstructorPayload {
+  name: string
+  email: string
+  cpf: string
+  ['udf-id']: string
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  try {
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
+    const rawPayload = await req.json()
+
+    const name = rawPayload.name
+    const email = rawPayload.email
+    const cpf = rawPayload.cpf
+    const udfId = rawPayload["udf-id"]
+    const externalId = cpf
+
+    if (!name || !email || !cpf || !udfId) {
+      throw new Error('Campos obrigatórios ausentes: name, email, cpf, udf-id')
+    }
+
+    // 1. Buscar instrutor pelo udf_id (identidade principal do instrutor)
+    const { data: instructorByUdfId } = await supabaseClient
+      .from('instructors')
+      .select('*')
+      .eq('udf_id', udfId)
+      .maybeSingle()
+
+    // 2. Buscar instrutor pelo email (pode ser outro instrutor!)
+    const { data: instructorByEmail } = await supabaseClient
+      .from('instructors')
+      .select('*')
+      .eq('email', email)
+      .maybeSingle()
+
+    // 3. Buscar instrutor pelo CPF (external_id) (pode ser outro instrutor!)
+    const { data: instructorByCpf } = await supabaseClient
+      .from('instructors')
+      .select('*')
+      .eq('external_id', externalId)
+      .maybeSingle()
+
+    // 4. Bloqueia duplicidade de email (só deixa atualizar se udf_id igual)
+    if (instructorByEmail && (!instructorByUdfId || instructorByEmail.id !== instructorByUdfId.id)) {
+      throw new Error('Já existe um instrutor cadastrado com este e-mail!')
+    }
+
+    // 5. Bloqueia duplicidade de CPF (external_id) (só deixa atualizar se udf_id igual)
+    if (instructorByCpf && (!instructorByUdfId || instructorByCpf.id !== instructorByUdfId.id)) {
+      throw new Error('Já existe um instrutor cadastrado com este CPF!')
+    }
+
+    let authUser = null
+    let instructorData = null
+
+    // 6. Se NÃO existe instrutor com o udf_id, cria no Auth e na tabela
+    if (!instructorByUdfId) {
+      const { data: authData, error: authError } = await supabaseClient.auth.admin.createUser({
+        email,
+        user_metadata: {
+          name,
+          role: 'instructor'
+        },
+        email_confirm: true
+      })
+
+      if (authError) throw authError
+
+      authUser = authData.user
+
+      const { data: newInstructor, error: instructorError } = await supabaseClient
+        .from('instructors')
+        .insert({
+          id: authUser.id,
+          name,
+          email,
+          udf_id: udfId,
+          external_id: externalId,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single()
+
+      if (instructorError) {
+        await supabaseClient.auth.admin.deleteUser(authUser.id).catch(console.error)
+        throw instructorError
+      }
+
+      instructorData = newInstructor
+
+    } else {
+      // Atualiza apenas dados permitidos, mantendo id
+      const { data: updatedInstructor, error: updateError } = await supabaseClient
+        .from('instructors')
+        .update({
+          name,
+          email,
+          udf_id: udfId,
+          external_id: externalId,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', instructorByUdfId.id)
+        .select()
+        .single()
+
+      if (updateError) throw updateError
+
+      instructorData = updatedInstructor
+
+      const { data: { user: existingAuthUser } } = await supabaseClient.auth.admin.getUserById(instructorByUdfId.id)
+      authUser = existingAuthUser
+    }
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        instructor: {
+          id: instructorData.id,
+          name: instructorData.name,
+          email: instructorData.email,
+          udf_id: instructorData.udf_id,
+          external_id: instructorData.external_id,
+          created_at: instructorData.created_at,
+          updated_at: instructorData.updated_at
+        },
+        auth_user: {
+          id: authUser.id,
+          email: authUser.email
+        },
+        message: !instructorByUdfId ? 'Instructor created successfully' : 'Instructor updated successfully'
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      }
+    )
+
+  } catch (error) {
+    console.error('Webhook error:', error)
+    return new Response(
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Erro desconhecido',
+        success: false
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      }
+    )
+  }
+})
