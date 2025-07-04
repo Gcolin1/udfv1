@@ -46,7 +46,6 @@ serve(async (req) => {
     let authUserId: string | null = null
 
     if (isTraining) {
-      // Cria usuário no Auth com senha aleatória
       const { data: authData, error: authError } = await supabaseClient.auth.admin.createUser({
         email,
         user_metadata: {
@@ -63,7 +62,6 @@ serve(async (req) => {
 
       authUserId = authData.user.id
 
-      // Upsert em instructors
       const { data: instructorData, error: instructorError } = await supabaseClient
         .from('instructors')
         .upsert({
@@ -84,7 +82,6 @@ serve(async (req) => {
       }
     }
 
-    // Upsert em players
     const { data: playerData, error: playerError } = await supabaseClient
       .from('players')
       .upsert({
@@ -102,14 +99,12 @@ serve(async (req) => {
       throw new Error(`Erro ao criar/atualizar player: ${playerError.message}`)
     }
 
-    // Garantir que temos um objeto player válido
     const playerRow = Array.isArray(playerData) ? playerData[0] : playerData
     if (!playerRow) {
       console.error('Não retornou playerData:', playerData)
       throw new Error('Não retornou playerData')
     }
 
-    // Vincular na class_players
     const { data: classPlayerData, error: classPlayerError } = await supabaseClient
       .from('class_players')
       .upsert({
@@ -131,7 +126,6 @@ serve(async (req) => {
       throw new Error('Não retornou classPlayerData')
     }
 
-    // Resposta final
     return new Response(
       JSON.stringify({
         success: true,

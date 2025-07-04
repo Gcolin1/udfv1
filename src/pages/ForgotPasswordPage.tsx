@@ -24,7 +24,7 @@ export default function ForgotPasswordPage() {
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`, // Redireciona para a página de redefinição de senha
+        redirectTo: `${window.location.origin}/auth/reset-password`,
       })
 
       if (error) {
@@ -32,7 +32,7 @@ export default function ForgotPasswordPage() {
         toast.error('Erro ao enviar e-mail de redefinição. Verifique seu e-mail e tente novamente.')
       } else {
         toast.success('E-mail de redefinição enviado! Verifique sua caixa de entrada (e spam).')
-        navigate('/login') // Redireciona de volta para a página de login
+        navigate('/login')
       }
     } catch (err) {
       console.error('Erro inesperado:', err)

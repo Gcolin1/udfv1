@@ -1,6 +1,6 @@
 // src/components/LoginForm.tsx
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom' // Importe Link
+import { useNavigate, Link } from 'react-router-dom'
 import { Eye, EyeOff, Mail, Lock, Loader2, UserPlus } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { colors } from '../lib/colors'
@@ -36,7 +36,6 @@ export function LoginForm() {
         const success = await login(email, password)
         
         if (success) {
-          // Navigate will be handled by the auth state change
           navigate('/')
         } else {
           setError('Credenciais inválidas. Verifique seu e-mail e senha, ou crie uma nova conta.')
@@ -121,7 +120,6 @@ export function LoginForm() {
                 A senha deve ter pelo menos 6 caracteres
               </p>
             )}
-            {/* Adicione o link "Esqueceu a senha?" aqui */}
             {!isSignUp && (
               <div className="text-right text-sm mt-2">
                 <Link to="/forgot-password" className="text-blue-600 hover:text-blue-800 font-medium">

@@ -1,4 +1,3 @@
-// src/components/Sidebar.tsx
 import { Link, useLocation } from 'react-router-dom'
 import {
   BarChart3,
@@ -6,7 +5,7 @@ import {
   User,
   LogOut,
   Home,
-  X // Import X icon for close button
+  X
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { colors } from '../lib/colors'
@@ -36,9 +35,14 @@ export function Sidebar({ isSidebarOpen, toggleSidebar }: SidebarProps) {
   const navItems = [
     { href: '/', icon: Home, label: 'Dashboard' },
     { href: '/classes', icon: Users, label: 'Turmas' },
-    //{ href: '/my-events', icon: Calendar, label: 'Meus Eventos' },
-    { href: '/reports', icon: BarChart3, label: 'Relatórios' },
-    { href: '/profile', icon: User, label: 'Perfil' },
+    {
+      href: '/reports',
+      icon: BarChart3,
+      label: 'Relatórios',
+      disabled: true,
+      title: 'Essa funcionalidade será desbloqueada em breve 🕹️'
+    },
+    { href: '/profile', icon: User, label: 'Perfil' }
   ]
 
   return (
@@ -49,8 +53,8 @@ export function Sidebar({ isSidebarOpen, toggleSidebar }: SidebarProps) {
         lg:translate-x-0`}
     >
       <div className="p-6">
-        <div className="flex items-center justify-between mb-8"> {/* Added justify-between */}
-          <div className="flex items-center gap-3"> {/* Wrapped logo and text */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
             <div className="w-20 h-20 rounded-full flex items-center justify-center shadow-md">
               <img src={Logo} alt="logo" />
             </div>
@@ -61,7 +65,7 @@ export function Sidebar({ isSidebarOpen, toggleSidebar }: SidebarProps) {
           </div>
           <button
             onClick={toggleSidebar}
-            className="lg:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg" // Close button for mobile
+            className="lg:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
           >
             <X className="w-5 h-5" />
           </button>
@@ -70,6 +74,31 @@ export function Sidebar({ isSidebarOpen, toggleSidebar }: SidebarProps) {
         <nav className="space-y-2">
           {navItems.map((item) => {
             const isActive = location.pathname === item.href
+
+            if (item.disabled) {
+              return (
+                <div
+                  key={item.href}
+                  className="relative flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 cursor-not-allowed opacity-60 group"
+                >
+                  <item.icon className="w-5 h-5" />
+                  <span>{item.label}</span>
+
+                  {item.title && (
+                    <div
+                      className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-2 text-sm text-white bg-slate-800 rounded-lg shadow-lg
+                                 whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 
+                                 transition-opacity duration-300 z-[60]
+                                 after:content-[''] after:absolute after:right-full after:top-1/2 after:-translate-y-1/2
+                                 after:border-[6px] after:border-transparent after:border-r-slate-800"
+                    >
+                      {item.title}
+                    </div>
+                  )}
+                </div>
+              )
+            }
+            
             return (
               <Link
                 key={item.href}
@@ -80,7 +109,7 @@ export function Sidebar({ isSidebarOpen, toggleSidebar }: SidebarProps) {
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
                 }`}
                 style={isActive ? { backgroundColor: colors.primary } : {}}
-                onClick={toggleSidebar} // Close sidebar on navigation click
+                onClick={toggleSidebar}
               >
                 <item.icon className="w-5 h-5" />
                 <span>{item.label}</span>

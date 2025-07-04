@@ -84,7 +84,7 @@ export function DashboardPage() {
           .from('matches')
           .select('*', { count: 'exact', head: true })
           .in('class_id', ids)
-          .gte('match_date', today)
+          .eq('match_date', today)
 
         matchesCount = matches || 0
       }

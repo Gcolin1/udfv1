@@ -190,7 +190,6 @@ export function ReportsPage() {
     try {
       const classIds = classes.map(c => c.id)
 
-      // Get class data with events
       const { data: classesWithEvents } = await supabase
         .from('classes')
         .select(`
@@ -202,7 +201,6 @@ export function ReportsPage() {
 
       if (!classesWithEvents) return
 
-      // Group by class and get match results
       const classPerformance = await Promise.all(
         classesWithEvents.map(async (classItem) => {
           const { data: results } = await supabase
@@ -223,8 +221,8 @@ export function ReportsPage() {
             name: classItem.code,
             value: matchesCount || 0,
             score: Math.round(avgScore),
-            time: Math.floor(Math.random() * 10) + 20, // Mock data for time
-            accuracy: Math.floor(Math.random() * 20) + 70 // Mock data for accuracy
+            time: Math.floor(Math.random() * 10) + 20,
+            accuracy: Math.floor(Math.random() * 20) + 70
           }
         })
       )
@@ -237,7 +235,7 @@ export function ReportsPage() {
 
   const loadSubjectDistribution = async () => {
     try {
-        if (!user) return; // Adicionado para segurança de tipo
+        if (!user) return;
       const { data: eventsData } = await supabase
         .from('events')
         .select('subject')
@@ -264,7 +262,7 @@ export function ReportsPage() {
 
   const loadTimelineData = async (startDate: Date, endDate: Date) => {
     try {
-        if (!user) return; // Adicionado para segurança de tipo
+        if (!user) return;
       const { data: classes } = await supabase
         .from('classes')
         .select('id')
@@ -274,7 +272,6 @@ export function ReportsPage() {
 
       const classIds = classes.map(c => c.id)
 
-      // Create time periods based on selected period
       const periods = []
       const periodLength = selectedPeriod === '7' ? 1 : selectedPeriod === '30' ? 5 : selectedPeriod === '90' ? 15 : 60
       const currentDate = new Date(startDate)
@@ -322,14 +319,12 @@ export function ReportsPage() {
 
       const engagementByClass = await Promise.all(
         classIds.map(async (classId) => {
-          // Get class info
           const { data: classInfo } = await supabase
             .from('classes')
             .select('code')
             .eq('id', classId)
             .single()
 
-          // Get match results for engagement calculation
           const { data: matchResults } = await supabase
             .from('match_results')
             .select('match_number, player_id')
@@ -337,7 +332,6 @@ export function ReportsPage() {
             .gte('created_at', startDate.toISOString())
             .lte('created_at', endDate.toISOString())
 
-          // Get student count
           const { count: studentCount } = await supabase
             .from('class_players')
             .select('*', { count: 'exact', head: true })
@@ -513,7 +507,6 @@ export function ReportsPage() {
         </div>
       </div>
 
-      {/* Match Results Chart */}
       <MatchResultsChart selectedPeriod={selectedPeriod} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 mt-8">

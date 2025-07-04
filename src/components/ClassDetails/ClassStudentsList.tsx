@@ -1,7 +1,8 @@
 // src/components/ClassDetails/ClassStudentsList.tsx
-import { Users, Trophy, TrendingUp, Target } from 'lucide-react'
+import { Users, Trophy, TrendingUp, Target, ChevronLeft, ChevronRight } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { useState } from 'react'
 
 interface Student {
   id: string
@@ -29,11 +30,24 @@ interface MatchResult {
 interface ClassStudentsListProps {
   students: Student[]
   matchResults?: MatchResult[]
+  itemsPerPage?: number
 }
 
-export function ClassStudentsList({ students, matchResults = [] }: ClassStudentsListProps) {
+export function ClassStudentsList({ students, matchResults = [], itemsPerPage = 10 }: ClassStudentsListProps) {
+  const [currentPage, setCurrentPage] = useState(1)
+  
   const uniqueMatchNumbers = [...new Set(matchResults.map(r => r.match_number))]
   const totalUniqueMatches = uniqueMatchNumbers.length
+
+  // Função para formatar valores em Real brasileiro
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value)
+  }
 
   const studentsWithResults = students.map(student => {
     const studentResults = matchResults.filter(result => result.player_id === student.id)
@@ -59,6 +73,30 @@ export function ClassStudentsList({ students, matchResults = [] }: ClassStudents
     }
   })
 
+  // Cálculos para paginação
+  const totalItems = studentsWithResults.length
+  const totalPages = Math.ceil(totalItems / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const currentStudents = studentsWithResults.slice(startIndex, endIndex)
+
+  // Funções de navegação
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)))
+  }
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1)
+    }
+  }
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1)
+    }
+  }
+
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-600'
     if (score >= 60) return 'text-yellow-600'
@@ -79,10 +117,18 @@ export function ClassStudentsList({ students, matchResults = [] }: ClassStudents
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-        <Users className="w-5 h-5" />
-        Alunos e Resultados Detalhados ({students.length})
-      </h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+          <Users className="w-5 h-5" />
+          Alunos e Resultados Detalhados ({totalItems})
+        </h2>
+        
+        {totalPages > 1 && (
+          <div className="text-sm text-gray-500">
+            Página {currentPage} de {totalPages}
+          </div>
+        )}
+      </div>
       
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -92,14 +138,14 @@ export function ClassStudentsList({ students, matchResults = [] }: ClassStudents
               <th className="text-left py-3 px-4 font-medium text-gray-700">E-mail</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700">Partidas</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700">Lucro Total</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-700">Satisfação Média</th>
+              <th className="text-left py-3 px-4 font-medium text-gray-700">Satisfação Total</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700">Bônus Total</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700">Engajamento</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700">Ingressou em</th>
             </tr>
           </thead>
           <tbody>
-            {studentsWithResults.map((student) => (
+            {currentStudents.map((student) => (
               <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50">
                 <td className="py-3 px-4">
                   <div>
@@ -120,7 +166,7 @@ export function ClassStudentsList({ students, matchResults = [] }: ClassStudents
                   <div className="flex items-center gap-1">
                     <TrendingUp className="w-4 h-4 text-blue-600" />
                     <span className={`font-medium ${getScoreColor(student.totalLucro)}`}>
-                      R$ {student.totalLucro}
+                      {formatCurrency(student.totalLucro)}
                     </span>
                   </div>
                 </td>
@@ -136,7 +182,7 @@ export function ClassStudentsList({ students, matchResults = [] }: ClassStudents
                   <div className="flex items-center gap-1">
                     <Trophy className="w-4 h-4 text-yellow-600" />
                     <span className={`font-medium ${getScoreColor(student.totalBonus)}`}>
-                      R$ {student.totalBonus}
+                      {formatCurrency(student.totalBonus)}
                     </span>
                   </div>
                 </td>
@@ -153,6 +199,78 @@ export function ClassStudentsList({ students, matchResults = [] }: ClassStudents
           </tbody>
         </table>
       </div>
+
+      {/* Controles de Paginação */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
+          <div className="text-sm text-gray-600">
+            Mostrando {startIndex + 1} a {Math.min(endIndex, totalItems)} de {totalItems} alunos
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <button
+              onClick={goToPreviousPage}
+              disabled={currentPage === 1}
+              className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                currentPage === 1
+                  ? 'text-gray-400 cursor-not-allowed'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Anterior
+            </button>
+            
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                // Mostrar apenas algumas páginas ao redor da página atual
+                if (
+                  page === 1 ||
+                  page === totalPages ||
+                  (page >= currentPage - 2 && page <= currentPage + 2)
+                ) {
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => goToPage(page)}
+                      className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                        page === currentPage
+                          ? 'bg-blue-600 text-white'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  )
+                } else if (
+                  page === currentPage - 3 ||
+                  page === currentPage + 3
+                ) {
+                  return (
+                    <span key={page} className="px-2 py-2 text-gray-400">
+                      ...
+                    </span>
+                  )
+                }
+                return null
+              })}
+            </div>
+            
+            <button
+              onClick={goToNextPage}
+              disabled={currentPage === totalPages}
+              className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                currentPage === totalPages
+                  ? 'text-gray-400 cursor-not-allowed'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Próxima
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {matchResults.length === 0 && (
         <div className="text-center py-8 border-t border-gray-200 mt-4">

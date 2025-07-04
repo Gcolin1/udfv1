@@ -17,7 +17,6 @@ interface Class {
   event?: {
     name: string
     subject: string
-    difficulty: string
   }
   influencer?: {
     name: string

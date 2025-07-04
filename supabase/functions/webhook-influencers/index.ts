@@ -30,7 +30,7 @@ serve(async (req) => {
         email,
         updated_at: new Date().toISOString()
       }, {
-        onConflict: 'email' // garante unicidade por email
+        onConflict: 'email'
       })
       .select('name, email')
       .single()

@@ -49,11 +49,9 @@ export function MyEventsPage() {
     }
   }, [user, authLoading])
 
-  // Filter events
   useEffect(() => {
     let filtered = events
 
-    // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(event =>
         event.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -62,7 +60,6 @@ export function MyEventsPage() {
       )
     }
 
-    // Filter by difficulty
     if (difficultyFilter !== 'all') {
       filtered = filtered.filter(event => event.difficulty === difficultyFilter)
     }
@@ -93,7 +90,6 @@ export function MyEventsPage() {
         return
       }
 
-      // Count classes for each event
       const eventsWithCounts = await Promise.all(
         (data || []).map(async (event) => {
           const { count } = await supabase

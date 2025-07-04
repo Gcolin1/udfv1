@@ -36,33 +36,28 @@ serve(async (req) => {
       throw new Error('Campos obrigatórios ausentes: name, email, cpf, udf-id')
     }
 
-    // 1. Buscar instrutor pelo udf_id (identidade principal do instrutor)
     const { data: instructorByUdfId } = await supabaseClient
       .from('instructors')
       .select('*')
       .eq('udf_id', udfId)
       .maybeSingle()
 
-    // 2. Buscar instrutor pelo email (pode ser outro instrutor!)
     const { data: instructorByEmail } = await supabaseClient
       .from('instructors')
       .select('*')
       .eq('email', email)
       .maybeSingle()
 
-    // 3. Buscar instrutor pelo CPF (external_id) (pode ser outro instrutor!)
     const { data: instructorByCpf } = await supabaseClient
       .from('instructors')
       .select('*')
       .eq('external_id', externalId)
       .maybeSingle()
 
-    // 4. Bloqueia duplicidade de email (só deixa atualizar se udf_id igual)
     if (instructorByEmail && (!instructorByUdfId || instructorByEmail.id !== instructorByUdfId.id)) {
       throw new Error('Já existe um instrutor cadastrado com este e-mail!')
     }
 
-    // 5. Bloqueia duplicidade de CPF (external_id) (só deixa atualizar se udf_id igual)
     if (instructorByCpf && (!instructorByUdfId || instructorByCpf.id !== instructorByUdfId.id)) {
       throw new Error('Já existe um instrutor cadastrado com este CPF!')
     }
@@ -70,7 +65,6 @@ serve(async (req) => {
     let authUser = null
     let instructorData = null
 
-    // 6. Se NÃO existe instrutor com o udf_id, cria no Auth e na tabela
     if (!instructorByUdfId) {
       const { data: authData, error: authError } = await supabaseClient.auth.admin.createUser({
         email,
@@ -107,7 +101,6 @@ serve(async (req) => {
       instructorData = newInstructor
 
     } else {
-      // Atualiza apenas dados permitidos, mantendo id
       const { data: updatedInstructor, error: updateError } = await supabaseClient
         .from('instructors')
         .update({

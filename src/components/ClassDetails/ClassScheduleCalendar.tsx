@@ -28,7 +28,6 @@ export function ClassScheduleCalendar({
   const daysInMonth = eachDayOfInterval({ start: currentMonth, end: endOfCurrentMonth })
   const startingDayIndex = getDay(currentMonth)
 
-  // ✅ Correção: garantindo tipagem unificada (Date | null)
   const calendarDays: (Date | null)[] = [
     ...Array.from({ length: startingDayIndex }, () => null),
     ...daysInMonth
@@ -110,7 +109,7 @@ export function ClassScheduleCalendar({
                 >
                   {day ? format(day, 'd') : ''}
                   {isScheduled && (
-                    <CalendarCheck className="absolute bottom-1 right-1 w-4 h-4 text-green-200" />
+                    <CalendarCheck className="absolute inset-0 w-full h-full text-cyan-700 p-1 pointer-events-none" />
                   )}
                 </div>
               )

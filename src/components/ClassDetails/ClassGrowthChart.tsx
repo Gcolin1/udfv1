@@ -1,73 +1,151 @@
-// src/components/ClassDetails/ClassGrowthChart.tsx
-import { useState, useEffect } from 'react'
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend
-} from 'recharts'
-import { TrendingUp, Users, Target, Trophy } from 'lucide-react'
+//ClassGrowthChart
+import { useState, useEffect, useMemo } from 'react'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { TrendingUp, Target, Trophy, LayoutGrid, Users, Search, Filter, X } from 'lucide-react'
+
+
+type Indicator = 'lucro' | 'satisfacao' | 'bonus' | 'geral'
+
+interface GrowthData {
+  match_number: number
+  [key: string]: number
+}
 
 interface Student {
   id: string
   name: string | null
-  email: string | null
-  joined_at: string | null
-  total_matches: number
-  avg_score: number
+  focus?: string
 }
 
 interface MatchResult {
   player_id: string
-  class_id: string
   match_number: number
   lucro: number | null
   satisfacao: number | null
   bonus: number | null
-  created_at: string
-  player?: {
-    name: string | null
-    email: string | null
-  }
 }
 
-interface GrowthData {
-  match_number: number
-  [key: string]: number // Para permitir propriedades dinâmicas dos jogadores
-}
-
-// CORREÇÃO 1: Removido 'classId' da interface de props
-interface ClassGrowthChartProps {
+interface StudentGrowthProps {
   students: Student[]
   matchResults: MatchResult[]
 }
-
-// CORREÇÃO 2: Removido 'classId' dos parâmetros da função
-export function ClassGrowthChart({ students, matchResults }: ClassGrowthChartProps) {
-  const [selectedIndicator, setSelectedIndicator] = useState<'lucro' | 'satisfacao' | 'bonus'>('lucro')
+export default function StudentGrowth({ students, matchResults }: StudentGrowthProps) {
+  const [selectedIndicator, setSelectedIndicator] = useState<Indicator>('geral')
   const [selectedStudents, setSelectedStudents] = useState<string[]>([])
   const [growthData, setGrowthData] = useState<GrowthData[]>([])
   const [classAverages, setClassAverages] = useState<GrowthData[]>([])
+  const [unifiedData, setUnifiedData] = useState<GrowthData[]>([])
+  
+  // Novos estados para filtros
+  const [studentFilter, setStudentFilter] = useState('')
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [minMatches, setMinMatches] = useState(0)
+  const [sortBy, setSortBy] = useState<'name' | 'matches' | 'performance'>('name')
+
+  // Filtra alunos baseado no indicador selecionado
+  const filteredStudents = useMemo(() => {
+    if (selectedIndicator === 'geral') return students
+    
+    return students.filter(student => {
+      const studentResults = matchResults.filter(result => result.player_id === student.id)
+      if (studentResults.length === 0) return false
+      
+      // Verifica se o aluno tem resultados para o indicador específico
+      switch (selectedIndicator) {
+        case 'lucro':
+          return studentResults.some(result => (result.lucro || 0) > 0)
+        case 'satisfacao':
+          return studentResults.some(result => (result.satisfacao || 0) > 0)
+        case 'bonus':
+          return studentResults.some(result => (result.bonus || 0) > 0)
+        default:
+          return true
+      }
+    })
+  }, [students, matchResults, selectedIndicator])
+
+  // Função para calcular estatísticas do aluno
+  const getStudentStats = (studentId: string) => {
+    const studentResults = matchResults.filter(result => result.player_id === studentId)
+    const matchCount = studentResults.length
+    const totalLucro = studentResults.reduce((sum, result) => sum + (result.lucro || 0), 0)
+    const avgSatisfacao = studentResults.length > 0 
+      ? studentResults.reduce((sum, result) => sum + (result.satisfacao || 0), 0) / studentResults.length 
+      : 0
+    const totalBonus = studentResults.reduce((sum, result) => sum + (result.bonus || 0), 0)
+    
+    return {
+      matchCount,
+      totalLucro,
+      avgSatisfacao,
+      totalBonus,
+      overallPerformance: totalLucro + avgSatisfacao + totalBonus
+    }
+  }
+
+  // Função de filtro melhorada
+  const getFilteredAndSortedStudents = useMemo(() => {
+    let filtered = selectedIndicator === 'geral' ? students : filteredStudents
+
+    // Filtro por nome
+    if (studentFilter.trim()) {
+      filtered = filtered.filter(student => 
+        (student.name ?? '').toLowerCase().includes(studentFilter.toLowerCase())
+      )
+    }
+
+    // Filtro por número mínimo de partidas
+    if (minMatches > 0) {
+      filtered = filtered.filter(student => {
+        const stats = getStudentStats(student.id)
+        return stats.matchCount >= minMatches
+      })
+    }
+
+    // Ordenação
+    filtered = [...filtered].sort((a, b) => {
+      const statsA = getStudentStats(a.id)
+      const statsB = getStudentStats(b.id)
+      
+      switch (sortBy) {
+        case 'name':
+          return (a.name ?? '').localeCompare(b.name ?? '')
+        case 'matches':
+          return statsB.matchCount - statsA.matchCount
+        case 'performance':
+          return statsB.overallPerformance - statsA.overallPerformance
+        default:
+          return 0
+      }
+    })
+
+    return filtered
+  }, [students, filteredStudents, selectedIndicator, studentFilter, minMatches, sortBy, matchResults])
 
   useEffect(() => {
-    if (matchResults.length > 0 && students.length > 0) {
-      calculateGrowthData()
-    }
-  }, [matchResults, students, selectedIndicator, selectedStudents])
+    calculateGrowthData()
+  }, [selectedIndicator, selectedStudents, matchResults])
 
-  const calculateGrowthData = () => {
-    // Obter todos os números de partida únicos
+  const isMonetaryIndicator = (indicator: string | Indicator) => {
+    return typeof indicator === 'string' ? 
+      indicator.toLowerCase().includes('lucro') || indicator.toLowerCase().includes('bônus') || indicator.toLowerCase().includes('bonus') :
+      indicator === 'lucro' || indicator === 'bonus'
+  }
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 0
+    }).format(value)
+  }
+
+  const calculateDataForIndicator = (indicator: 'lucro' | 'satisfacao' | 'bonus') => {
     const matchNumbers = [...new Set(matchResults.map(result => result.match_number))].sort((a, b) => a - b)
     
-    // Calcular dados de crescimento por aluno
     const growthByMatch: GrowthData[] = matchNumbers.map(matchNumber => {
       const matchData: GrowthData = { match_number: matchNumber }
       
-      // Para cada aluno selecionado, calcular o valor acumulado até esta partida
       selectedStudents.forEach(studentId => {
         const student = students.find(s => s.id === studentId)
         if (!student) return
@@ -77,14 +155,14 @@ export function ClassGrowthChart({ students, matchResults }: ClassGrowthChartPro
           .sort((a, b) => a.match_number - b.match_number)
         
         if (studentResults.length > 0) {
+          const studentName = student.name || `Aluno ${studentId.slice(0, 8)}`
           let value = 0
           
-          switch (selectedIndicator) {
+          switch (indicator) {
             case 'lucro':
               value = studentResults.reduce((sum, result) => sum + (result.lucro || 0), 0)
               break
             case 'satisfacao':
-              // Para satisfação, geralmente se pega o último valor, não a média dos acumulados
               value = studentResults[studentResults.length - 1].satisfacao || 0
               break
             case 'bonus':
@@ -92,98 +170,231 @@ export function ClassGrowthChart({ students, matchResults }: ClassGrowthChartPro
               break
           }
           
-          matchData[student.name || `Aluno ${studentId.slice(0, 8)}`] = Math.round(value)
+          matchData[`${studentName} - ${getIndicatorLabel(indicator)}`] = Math.round(value)
         }
       })
       
       return matchData
     })
     
-    // Calcular médias da turma
     const averagesByMatch: GrowthData[] = matchNumbers.map(matchNumber => {
       const matchData: GrowthData = { match_number: matchNumber }
+      const relevantStudents = selectedIndicator === 'geral' ? students : filteredStudents;
       
-      const allStudentResults = students.map(student => {
-        const studentResults = matchResults
-          .filter(result => result.player_id === student.id && result.match_number <= matchNumber)
-        
+      const allStudentResults = relevantStudents.map(student => {
+        const studentResults = matchResults.filter(result => result.player_id === student.id && result.match_number <= matchNumber)
         if (studentResults.length === 0) return 0
-        
-        switch (selectedIndicator) {
-          case 'lucro':
-            return studentResults.reduce((sum, result) => sum + (result.lucro || 0), 0)
-          case 'satisfacao':
-             // Pega o último resultado de satisfação do aluno
-            const lastResult = studentResults.sort((a,b) => b.match_number - a.match_number)[0];
-            return lastResult.satisfacao || 0
-          case 'bonus':
-            return studentResults.reduce((sum, result) => sum + (result.bonus || 0), 0)
-          default:
-            return 0
+        switch (indicator) {
+          case 'lucro': return studentResults.reduce((sum, result) => sum + (result.lucro || 0), 0)
+          case 'satisfacao': return studentResults.sort((a,b) => b.match_number - a.match_number)[0]?.satisfacao || 0
+          case 'bonus': return studentResults.reduce((sum, result) => sum + (result.bonus || 0), 0)
+          default: return 0
         }
-      }).filter(value => value > 0) // Filtra para não incluir alunos sem dados na média
+      }).filter(value => value > 0)
       
       if (allStudentResults.length > 0) {
-        matchData['Média da Turma'] = Math.round(
-          allStudentResults.reduce((sum, value) => sum + value, 0) / allStudentResults.length
-        )
+        matchData[`Média da Turma - ${getIndicatorLabel(indicator)}`] = Math.round(allStudentResults.reduce((sum, value) => sum + value, 0) / allStudentResults.length)
       }
+      return matchData
+    })
+
+    return { growth: growthByMatch, avg: averagesByMatch }
+  }
+
+  const calculateUnifiedData = () => {
+    const matchNumbers = [...new Set(matchResults.map(result => result.match_number))].sort((a, b) => a - b)
+    
+    const unified: GrowthData[] = matchNumbers.map(matchNumber => {
+      const matchData: GrowthData = { match_number: matchNumber }
+      
+      selectedStudents.forEach(studentId => {
+        const student = students.find(s => s.id === studentId)
+        if (!student) return
+        
+        const studentResults = matchResults
+          .filter(result => result.player_id === studentId && result.match_number <= matchNumber)
+          .sort((a, b) => a.match_number - b.match_number)
+        
+        if (studentResults.length > 0) {
+          const studentName = student.name || `Aluno ${studentId.slice(0, 8)}`
+          
+          const lucroValue = studentResults.reduce((sum, result) => sum + (result.lucro || 0), 0)
+          matchData[`${studentName} - Lucro`] = Math.round(lucroValue)
+          
+          const satisfacaoValue = studentResults[studentResults.length - 1].satisfacao || 0
+          matchData[`${studentName} - Satisfação`] = Math.round(satisfacaoValue)
+          
+          const bonusValue = studentResults.reduce((sum, result) => sum + (result.bonus || 0), 0)
+          matchData[`${studentName} - Bônus`] = Math.round(bonusValue)
+        }
+      })
+      
+      const indicators = ['lucro', 'satisfacao', 'bonus'] as const
+      indicators.forEach(indicator => {
+        const allStudentResults = students.map(student => {
+          const studentResults = matchResults.filter(result => result.player_id === student.id && result.match_number <= matchNumber)
+          if (studentResults.length === 0) return 0
+          switch (indicator) {
+            case 'lucro': return studentResults.reduce((sum, result) => sum + (result.lucro || 0), 0)
+            case 'satisfacao': return studentResults.sort((a,b) => b.match_number - a.match_number)[0]?.satisfacao || 0
+            case 'bonus': return studentResults.reduce((sum, result) => sum + (result.bonus || 0), 0)
+            default: return 0
+          }
+        }).filter(value => value > 0)
+        
+        if (allStudentResults.length > 0) {
+          matchData[`Média da Turma - ${getIndicatorLabel(indicator)}`] = Math.round(allStudentResults.reduce((sum, value) => sum + value, 0) / allStudentResults.length)
+        }
+      })
       
       return matchData
     })
     
-    setGrowthData(growthByMatch)
-    setClassAverages(averagesByMatch)
+    return unified
+  }
+  
+  const calculateGrowthData = () => {
+    if (selectedIndicator === 'geral') {
+      const unified = calculateUnifiedData()
+      setUnifiedData(unified)
+      setGrowthData([])
+      setClassAverages([])
+    } else {
+      const { growth, avg } = calculateDataForIndicator(selectedIndicator)
+      setGrowthData(growth)
+      setClassAverages(avg)
+      setUnifiedData([])
+    }
   }
 
   const handleStudentToggle = (studentId: string) => {
-    setSelectedStudents(prev => {
-      if (prev.includes(studentId)) {
-        return prev.filter(id => id !== studentId)
-      } else {
-        return [...prev, studentId]
-      }
-    })
+    setSelectedStudents(prev => prev.includes(studentId) ? prev.filter(id => id !== studentId) : [...prev, studentId])
   }
-
-  const getIndicatorLabel = () => {
-    switch (selectedIndicator) {
-      case 'lucro': return 'Lucro (R$)'
-      case 'satisfacao': return 'Satisfação (%)'
-      case 'bonus': return 'Bônus (R$)'
+  
+  const getIndicatorLabel = (indicator: Indicator) => {
+    switch (indicator) {
+      case 'lucro': return 'Lucro'
+      case 'satisfacao': return 'Satisfação'
+      case 'bonus': return 'Bônus'
+      case 'geral': return 'Visão Geral'
       default: return ''
     }
   }
 
-  const getIndicatorIcon = () => {
-    switch (selectedIndicator) {
+  const getIndicatorIcon = (indicator: Indicator) => {
+    switch (indicator) {
       case 'lucro': return <TrendingUp className="w-4 h-4" />
       case 'satisfacao': return <Target className="w-4 h-4" />
       case 'bonus': return <Trophy className="w-4 h-4" />
+      case 'geral': return <LayoutGrid className="w-4 h-4" />
       default: return null
     }
   }
 
+  // Tooltip customizado para formatar valores monetários
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+          <p className="font-medium text-gray-800">{`Partida ${label}`}</p>
+          {payload.map((entry: any, index: number) => (
+            <p key={index} className="text-sm" style={{ color: entry.color }}>
+              {`${entry.name}: ${isMonetaryIndicator(entry.name) ? formatCurrency(entry.value) : entry.value}`}
+            </p>
+          ))}
+        </div>
+      )
+    }
+    return null
+  }
+
   const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#F97316', '#84CC16']
 
-  if (students.length === 0 || matchResults.length === 0) {
+  const getLineColor = (dataKey: string, index: number) => {
+    if (dataKey.includes('Média da Turma')) {
+      if (dataKey.includes('Lucro')) return '#3B82F6'
+      if (dataKey.includes('Satisfação')) return '#10B981'
+      if (dataKey.includes('Bônus')) return '#F59E0B'
+      return '#6B7280'
+    }
+    return colors[index % colors.length]
+  }
+
+  const renderChart = (data: GrowthData[], avgData: GrowthData[], indicator: 'lucro' | 'satisfacao' | 'bonus') => (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+        {getIndicatorIcon(indicator)}
+        Evolução de {getIndicatorLabel(indicator)}
+      </h3>
+      <div className="h-96">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="match_number" label={{ value: 'Número da Partida', position: 'insideBottom', offset: -5 }} />
+            <YAxis 
+              label={{ value: `${getIndicatorLabel(indicator)}`, angle: -90, position: 'insideLeft' }}
+              tickFormatter={(value) => isMonetaryIndicator(indicator) ? formatCurrency(value) : value}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend />
+            {selectedStudents.map((studentId, index) => {
+              const student = students.find(s => s.id === studentId)
+              if (!student) return null
+              return <Line key={studentId} type="monotone" dataKey={`${student.name || `Aluno ${studentId.slice(0, 8)}`} - ${getIndicatorLabel(indicator)}`} stroke={colors[index % colors.length]} strokeWidth={2} dot={{ r: 4 }} connectNulls={false} />
+            })}
+            <Line type="monotone" dataKey={`Média da Turma - ${getIndicatorLabel(indicator)}`} data={avgData} stroke="#6B7280" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 3 }} connectNulls={false} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  )
+
+  const renderUnifiedChart = (data: GrowthData[]) => {
+    const dataKeys = Object.keys(data[0] || {}).filter(key => key !== 'match_number')
+    
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 text-blue-600" />
-          Crescimento por Aluno
-        </h2>
-        <div className="text-center py-8">
-          <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">Nenhum dado de crescimento disponível ainda.</p>
-          <p className="text-gray-500 text-sm mt-2">
-            Os gráficos aparecerão quando houver resultados de partidas.
-          </p>
+        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          <LayoutGrid className="w-4 h-4" />
+          Evolução Geral - Todos os Indicadores
+        </h3>
+        <div className="h-96">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="match_number" label={{ value: 'Número da Partida', position: 'insideBottom', offset: -5 }} />
+              <YAxis 
+                label={{ value: 'Valores', angle: -90, position: 'insideLeft' }}
+                tickFormatter={(value) => {
+                  // Para o gráfico unificado, formatamos apenas valores altos como monetários
+                  // assumindo que valores > 100 são monetários
+                  return value > 100 ? formatCurrency(value) : value
+                }}
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend />
+              {dataKeys.map((dataKey, index) => {
+                const isAverage = dataKey.includes('Média da Turma')
+                return (
+                  <Line
+                    key={dataKey}
+                    type="monotone"
+                    dataKey={dataKey}
+                    stroke={getLineColor(dataKey, index)}
+                    strokeWidth={isAverage ? 2 : 2}
+                    strokeDasharray={isAverage ? "5 5" : "0"}
+                    dot={{ r: isAverage ? 3 : 4 }}
+                    connectNulls={false}
+                  />
+                )
+              })}
+            </LineChart>
+          </ResponsiveContainer>
         </div>
       </div>
     )
   }
-
+  
   return (
     <div className="space-y-6">
       {/* Controles */}
@@ -197,67 +408,137 @@ export function ClassGrowthChart({ students, matchResults }: ClassGrowthChartPro
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-3">Indicador:</label>
           <div className="flex gap-2 flex-wrap">
-            <button
-              onClick={() => setSelectedIndicator('lucro')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-                selectedIndicator === 'lucro'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              <TrendingUp className="w-4 h-4" />
-              Lucro
+            <button onClick={() => setSelectedIndicator('geral')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${selectedIndicator === 'geral' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+              <LayoutGrid className="w-4 h-4" /> Geral
             </button>
-            <button
-              onClick={() => setSelectedIndicator('satisfacao')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-                selectedIndicator === 'satisfacao'
-                  ? 'bg-green-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              <Target className="w-4 h-4" />
-              Satisfação
+            <button onClick={() => setSelectedIndicator('lucro')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${selectedIndicator === 'lucro' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+              <TrendingUp className="w-4 h-4" /> Lucro
             </button>
-            <button
-              onClick={() => setSelectedIndicator('bonus')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-                selectedIndicator === 'bonus'
-                  ? 'bg-yellow-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              <Trophy className="w-4 h-4" />
-              Bônus
+            <button onClick={() => setSelectedIndicator('satisfacao')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${selectedIndicator === 'satisfacao' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+              <Target className="w-4 h-4" /> Satisfação
+            </button>
+            <button onClick={() => setSelectedIndicator('bonus')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${selectedIndicator === 'bonus' ? 'bg-yellow-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+              <Trophy className="w-4 h-4" /> Bônus
             </button>
           </div>
         </div>
 
-        {/* Seletor de Alunos */}
+        {/* Seletor de Alunos com Filtros */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            Alunos ({selectedStudents.length} selecionados):
-          </label>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-40 overflow-y-auto">
-            {students.map((student) => (
-              <label key={student.id} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectedStudents.includes(student.id)}
-                  onChange={() => handleStudentToggle(student.id)}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="text-sm text-gray-700 truncate">{student.name}</span>
-              </label>
-            ))}
+          <div className="flex items-center justify-between mb-3">
+            <label className="block text-sm font-medium text-gray-700">
+              Alunos para o indicador "{getIndicatorLabel(selectedIndicator)}" ({selectedStudents.length} selecionados):
+            </label>
+            <button
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+            >
+              <Filter className="w-4 h-4" />
+              {showAdvancedFilters ? 'Ocultar Filtros' : 'Filtros Avançados'}
+            </button>
           </div>
-          
+
+          {/* Filtro por nome */}
+          <div className="relative mb-3">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar aluno por nome..."
+              value={studentFilter}
+              onChange={(e) => setStudentFilter(e.target.value)}
+              className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            {studentFilter && (
+              <button
+                onClick={() => setStudentFilter('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Filtros avançados */}
+          {showAdvancedFilters && (
+            <div className="bg-gray-50 p-4 rounded-lg mb-3 space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Mínimo de partidas:
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={minMatches}
+                    onChange={(e) => setMinMatches(Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Ordenar por:
+                  </label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as 'name' | 'matches' | 'performance')}
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="name">Nome</option>
+                    <option value="matches">Número de partidas</option>
+                    <option value="performance">Performance geral</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setStudentFilter('')
+                    setMinMatches(0)
+                    setSortBy('name')
+                  }}
+                  className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+                >
+                  Limpar Filtros
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Lista de alunos filtrados */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-40 overflow-y-auto p-1 border border-gray-200 rounded-lg">
+            {getFilteredAndSortedStudents.map((student) => {
+              const stats = getStudentStats(student.id)
+              return (
+                <label key={student.id} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedStudents.includes(student.id)}
+                    onChange={() => handleStudentToggle(student.id)}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm text-gray-700 truncate block">{student.name}</span>
+                    <span className="text-xs text-gray-500">
+                      {stats.matchCount} partidas
+                    </span>
+                  </div>
+                </label>
+              )
+            })}
+            {getFilteredAndSortedStudents.length === 0 && (
+              <p className="text-sm text-gray-500 col-span-full text-center py-4">
+                {studentFilter ? 'Nenhum aluno encontrado com esse filtro.' : 'Nenhum aluno disponível.'}
+              </p>
+            )}
+          </div>
+
+          {/* Controles de seleção */}
           <div className="flex gap-2 mt-3">
             <button
-              onClick={() => setSelectedStudents(students.map(s => s.id))}
+              onClick={() => setSelectedStudents(getFilteredAndSortedStudents.map(s => s.id))}
               className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
             >
-              Selecionar Todos
+              Selecionar Todos ({getFilteredAndSortedStudents.length})
             </button>
             <button
               onClick={() => setSelectedStudents([])}
@@ -266,75 +547,30 @@ export function ClassGrowthChart({ students, matchResults }: ClassGrowthChartPro
               Limpar Seleção
             </button>
           </div>
+          
+          {/* Informações do filtro */}
+          {(studentFilter || minMatches > 0 || sortBy !== 'name') && (
+            <div className="mt-2 text-xs text-gray-500">
+              Mostrando {getFilteredAndSortedStudents.length} de {selectedIndicator === 'geral' ? students.length : filteredStudents.length} alunos
+              {studentFilter && ` • Filtro: "${studentFilter}"`}
+              {minMatches > 0 && ` • Mín. ${minMatches} partidas`}
+              {sortBy !== 'name' && ` • Ordenado por ${sortBy === 'matches' ? 'partidas' : 'performance'}`}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Gráfico */}
-      {selectedStudents.length > 0 && growthData.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            {getIndicatorIcon()}
-            Evolução de {getIndicatorLabel()}
-          </h3>
-          
-          <div className="h-96">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={growthData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="match_number" 
-                  label={{ value: 'Número da Partida', position: 'insideBottom', offset: -5 }}
-                />
-                <YAxis 
-                  label={{ value: getIndicatorLabel(), angle: -90, position: 'insideLeft' }}
-                />
-                <Tooltip 
-                  formatter={(value, name) => [`${value}`, name]}
-                  labelFormatter={(label) => `Partida ${label}`}
-                />
-                <Legend />
-                
-                {/* Linhas dos alunos selecionados */}
-                {selectedStudents.map((studentId, index) => {
-                  const student = students.find(s => s.id === studentId)
-                  if (!student) return null
-                  
-                  return (
-                    <Line
-                      key={studentId}
-                      type="monotone"
-                      dataKey={student.name || `Aluno ${studentId.slice(0, 8)}`}
-                      stroke={colors[index % colors.length]}
-                      strokeWidth={2}
-                      dot={{ fill: colors[index % colors.length], strokeWidth: 2, r: 4 }}
-                      connectNulls={false}
-                    />
-                  )
-                })}
-                
-                {/* Linha da média da turma */}
-                <Line
-                  type="monotone"
-                  dataKey="Média da Turma"
-                  data={classAverages}
-                  stroke="#6B7280"
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  dot={{ fill: '#6B7280', strokeWidth: 2, r: 3 }}
-                  connectNulls={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-          
-          <div className="mt-4 text-sm text-gray-600">
-            <p>• Linhas sólidas representam alunos individuais</p>
-            <p>• Linha pontilhada representa a média da turma</p>
-            <p>• Os valores de Lucro e Bônus são acumulativos. Satisfação representa o valor da última partida.</p>
-          </div>
+      {/* Gráficos */}
+      {selectedStudents.length > 0 && (
+        <div className="space-y-6">
+          {selectedIndicator !== 'geral' && growthData.length > 0 && (
+            renderChart(growthData, classAverages, selectedIndicator)
+          )}
+          {selectedIndicator === 'geral' && unifiedData.length > 0 && (
+            renderUnifiedChart(unifiedData)
+          )}
         </div>
       )}
-
       {selectedStudents.length === 0 && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
           <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />

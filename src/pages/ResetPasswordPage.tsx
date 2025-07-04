@@ -14,7 +14,7 @@ export default function ResetPasswordPage() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    const hash = window.location.hash.substring(1) // Remove the '#'
+    const hash = window.location.hash.substring(1)
     const params = new URLSearchParams(hash)
     const accessToken = params.get('access_token')
     const errorDescription = params.get('error_description')
@@ -24,8 +24,6 @@ export default function ResetPasswordPage() {
       const message = errorDescription || `Erro: ${errorCode}`
       setErrorMessage(message)
       toast.error(`Erro: ${message}. Por favor, tente novamente ou solicite um novo link.`)
-      // Optionally navigate back to forgot password or login after showing error
-      // navigate('/login') // Or navigate('/forgot-password')
     } else if (!accessToken) {
       setErrorMessage('Token de acesso não encontrado. Por favor, use o link completo do e-mail de redefinição de senha.')
       toast.error('Token de acesso não encontrado. Por favor, use o link completo do e-mail de redefinição de senha.')
@@ -36,7 +34,7 @@ export default function ResetPasswordPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    setErrorMessage(null) // Clear previous errors
+    setErrorMessage(null)
 
     if (newPassword.length < 6) {
       setErrorMessage('A senha deve ter pelo menos 6 caracteres.')
@@ -46,7 +44,6 @@ export default function ResetPasswordPage() {
     }
 
     try {
-      // Supabase client automatically uses the access_token from the URL hash.
       const { error } = await supabase.auth.updateUser({ password: newPassword });
 
       if (error) {

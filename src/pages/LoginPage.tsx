@@ -17,12 +17,11 @@ export function LoginPage() {
   }, [user, navigate])
 
   if (user) {
-    return null // Evita flash da tela de login
+    return null 
   }
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row"> {/* Added flex-col lg:flex-row */}
-      {/* Lado esquerdo - Logo */}
+    <div className="min-h-screen flex flex-col lg:flex-row">
       <div 
         className="hidden lg:flex lg:w-1/2 items-center justify-center relative overflow-hidden"
         style={{ backgroundColor: colors.primary }}
@@ -39,13 +38,13 @@ export function LoginPage() {
         </div>
         
         {/* Elementos decorativos */}
-        <div className="absolute top-10 left-10 w-20 h-20 bg-white/10 rounded-full hidden lg:block"></div> {/* Added hidden lg:block */}
-        <div className="absolute bottom-10 right-10 w-32 h-32 bg-white/5 rounded-full hidden lg:block"></div> {/* Added hidden lg:block */}
-        <div className="absolute top-1/2 left-20 w-16 h-16 bg-white/10 rounded-full hidden lg:block"></div> {/* Added hidden lg:block */}
+        <div className="absolute top-10 left-10 w-20 h-20 bg-white/10 rounded-full hidden lg:block"></div>
+        <div className="absolute bottom-10 right-10 w-32 h-32 bg-white/5 rounded-full hidden lg:block"></div>
+        <div className="absolute top-1/2 left-20 w-16 h-16 bg-white/10 rounded-full hidden lg:block"></div>
       </div>
 
       {/* Lado direito - Formulário */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-8 bg-gradient-to-br from-gray-50 to-gray-100"> {/* Changed padding to be responsive */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-8 bg-gradient-to-br from-gray-50 to-gray-100">
         <div className="w-full max-w-md">
           {/* Logo mobile */}
           <div className="lg:hidden text-center mb-8">
@@ -55,7 +54,6 @@ export function LoginPage() {
               <img src={Logo} alt="logo" />
             </div>
           </div>
-          
           <LoginForm />
         </div>
       </div>

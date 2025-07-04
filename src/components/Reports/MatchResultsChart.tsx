@@ -1,6 +1,5 @@
 // src/components/Reports/MatchResultsChart.tsx
 import { useState, useEffect } from 'react'
-// CORREÇÃO: Removidos 'LineChart' e 'Line' pois não são utilizados no componente
 import {
   BarChart,
   Bar,
@@ -72,7 +71,6 @@ export function MatchResultsChart({ selectedPeriod }: MatchResultsChartProps) {
     setIsLoading(true)
 
     try {
-      // Calculate date range based on selected period
       const endDate = new Date()
       const startDate = new Date()
       
@@ -93,7 +91,6 @@ export function MatchResultsChart({ selectedPeriod }: MatchResultsChartProps) {
           startDate.setDate(endDate.getDate() - 30)
       }
 
-      // Get instructor's classes first
       const { data: classes, error: classesError } = await supabase
         .from('classes')
         .select('id')
@@ -112,7 +109,6 @@ export function MatchResultsChart({ selectedPeriod }: MatchResultsChartProps) {
 
       const classIds = classes.map(c => c.id)
 
-      // Get match results for instructor's classes
       const { data: results, error: resultsError } = await supabase
         .from('match_results')
         .select(`
@@ -145,7 +141,6 @@ export function MatchResultsChart({ selectedPeriod }: MatchResultsChartProps) {
   }
 
   const processChartData = () => {
-    // Group by class and calculate averages
     const classGroups = matchResults.reduce((acc, result) => {
       const classCode = result.class?.code || 'Sem código'
       

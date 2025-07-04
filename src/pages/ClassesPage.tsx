@@ -1,14 +1,11 @@
 // src/pages/ClassesPage.tsx
-// IMPORTS
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Users, Clock } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
-// INTERFACES
 interface Class {
   id: string
   code: string
@@ -24,7 +21,6 @@ interface Class {
   event?: {
     name: string
     subject: string
-    difficulty: string
     time_limit: number
     max_players: number
   }
@@ -42,7 +38,6 @@ interface Student {
   avg_score: number
 }
 
-// COMPONENT
 export function ClassesPage() {
   const { user, isLoading: authLoading } = useAuth()
   const [classes, setClasses] = useState<Class[]>([])
@@ -70,6 +65,7 @@ export function ClassesPage() {
           influencers:influencer_id (name)
         `)
         .eq('instructor_id', user.id)
+        .order('created_at', { ascending: false })
 
       if (error) {
         console.error('Erro ao carregar turmas:', error)
@@ -98,24 +94,6 @@ export function ClassesPage() {
       console.error('Erro ao carregar turmas:', error)
     } finally {
       setIsLoading(false)
-    }
-  }
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy': return 'bg-green-100 text-green-800'
-      case 'medium': return 'bg-yellow-100 text-yellow-800'
-      case 'hard': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getDifficultyLabel = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy': return 'Fácil'
-      case 'medium': return 'Médio'
-      case 'hard': return 'Difícil'
-      default: return difficulty
     }
   }
 
@@ -237,7 +215,7 @@ export function ClassesPage() {
               <h2 className="text-xl font-semibold">Alunos - {selectedClass.code}</h2>
               <button onClick={() => setShowStudentsModal(false)} className="text-xl">×</button>
             </div>
-            <div className="overflow-x-auto"> {/* Added overflow-x-auto here */}
+            <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr>

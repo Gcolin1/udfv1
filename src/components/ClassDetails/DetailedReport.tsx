@@ -13,8 +13,6 @@ import {
   BarChart3,
   Filter,
   Search,
-  Eye,
-  EyeOff,
   Crown,
   Medal
 } from 'lucide-react'
@@ -22,7 +20,6 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import toast from 'react-hot-toast'
 
-// --- INTERFACES ---
 interface Student {
   id: string
   name: string | null
@@ -72,7 +69,6 @@ interface Class {
   event?: {
     name: string
     subject: string
-    difficulty: string
     expected_matches?: number
   }
   influencer?: {
@@ -126,11 +122,30 @@ interface StudentReport {
   }
 }
 
+const formatCurrency = (value: number): string => {
+  if (value >= 1000000) {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      notation: 'compact',
+      compactDisplay: 'short',
+      maximumFractionDigits: 1
+    }).format(value)
+  }
+
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value)
+}
+
 export function DetailedReport({ classData, students, matchResults, teams }: DetailedReportProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterBy, setFilterBy] = useState<'all' | 'team' | 'individual'>('all')
   const [sortBy, setSortBy] = useState<'name' | 'lucro' | 'satisfacao' | 'bonus' | 'overall'>('overall')
-  const [showMatchHistory, setShowMatchHistory] = useState<string | null>(null)
+  const [showMatchHistory] = useState<string | null>(null)
   const [selectedSection, setSelectedSection] = useState<'summary' | 'students' | 'teams' | 'performance'>('summary')
 
   const getPurposeLabel = (purpose: 'lucro' | 'satisfacao' | 'bonus' | null) => {
@@ -148,24 +163,6 @@ export function DetailedReport({ classData, students, matchResults, teams }: Det
       case 'satisfacao': return 'bg-green-100 text-green-800'
       case 'bonus': return 'bg-yellow-100 text-yellow-800'
       default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy': return 'bg-green-100 text-green-800'
-      case 'medium': return 'bg-yellow-100 text-yellow-800'
-      case 'hard': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getDifficultyLabel = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy': return 'Fácil'
-      case 'medium': return 'Médio'
-      case 'hard': return 'Difícil'
-      default: return difficulty
     }
   }
 
@@ -305,10 +302,15 @@ export function DetailedReport({ classData, students, matchResults, teams }: Det
     const uniquePlayers = students.length
     const totalTeams = teams.length
 
-    const expectedTotalMatches = uniquePlayers * (classData.event?.expected_matches || 1);
+    const totalParticipations = matchResults.length;
+    const uniqueMatchNumbers = [...new Set(matchResults.map(r => r.match_number))];
+    const totalUniqueMatches = uniqueMatchNumbers.length;
+    
+    const expectedTotalMatches = students.length * totalUniqueMatches;
+    
     const classEngagement = expectedTotalMatches > 0
-        ? Math.round((totalMatchesPlayed / expectedTotalMatches) * 100)
-        : 0;
+      ? Math.min(100, Math.round((totalParticipations / expectedTotalMatches) * 100))
+      : 0;
 
     return {
       totalLucro: Math.round(totalLucro),
@@ -337,9 +339,9 @@ Estatísticas Gerais da Turma:
 Total de Alunos: ${classStats.uniquePlayers}
 Total de Times: ${classStats.totalTeams}
 Total de Partidas Jogadas: ${classStats.totalMatchesPlayed}
-Média de Lucro por Aluno: R$ ${classStats.avgLucro}
+Média de Lucro por Aluno: ${formatCurrency(classStats.avgLucro)}
 Média de Satisfação por Aluno: ${classStats.avgSatisfacao}%
-Média de Bônus por Aluno: R$ ${classStats.avgBonus}
+Média de Bônus por Aluno: ${formatCurrency(classStats.avgBonus)}
 Engajamento da Turma: ${classStats.classEngagement}%
 `;
 
@@ -447,8 +449,9 @@ Engajamento da Turma: ${classStats.classEngagement}%
           <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
             <FileText className="w-4 h-4" /> Visão Geral da Turma
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+            <div className="space-y-3">
+              <h4 className="font-semibold text-gray-700">Detalhes da Turma</h4>
               <p className="text-sm text-gray-600"><strong>Código da Turma:</strong> {classData.code}</p>
               <p className="text-sm text-gray-600"><strong>Descrição:</strong> {classData.description || 'N/A'}</p>
               <p className="text-sm text-gray-600"><strong>Evento:</strong> {classData.event?.name || 'N/A'} ({classData.event?.subject || 'N/A'})</p>
@@ -456,13 +459,15 @@ Engajamento da Turma: ${classStats.classEngagement}%
               <p className="text-sm text-gray-600"><strong>Data de Início:</strong> {classData.start_date ? format(new Date(classData.start_date), 'dd/MM/yyyy HH:mm', { locale: ptBR }) : 'N/A'}</p>
               <p className="text-sm text-gray-600"><strong>Data de Fim:</strong> {classData.end_date ? format(new Date(classData.end_date), 'dd/MM/yyyy HH:mm', { locale: ptBR }) : 'N/A'}</p>
             </div>
-            <div className="space-y-2">
+            
+            <div className="space-y-3">
+              <h4 className="font-semibold text-gray-700">Responsáveis e Criação</h4>
               <p className="text-sm text-gray-600"><strong>Instrutor:</strong> {classData.instructor?.name || 'N/A'}</p>
               <p className="text-sm text-gray-600"><strong>Influenciador:</strong> {classData.influencer?.name || 'N/A'}</p>
               <p className="text-sm text-gray-600"><strong>Criada em:</strong> {format(new Date(classData.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</p>
             </div>
           </div>
-
+      
           <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2 mt-6">
             <BarChart3 className="w-4 h-4" /> Estatísticas Gerais
           </h3>
@@ -482,14 +487,14 @@ Engajamento da Turma: ${classStats.classEngagement}%
               <p className="text-2xl font-bold text-gray-800">{classStats.totalMatchesPlayed}</p>
               <p className="text-sm text-gray-600">Partidas Jogadas</p>
             </div>
-             <div className="bg-gray-50 p-4 rounded-lg text-center">
+            <div className="bg-gray-50 p-4 rounded-lg text-center">
               <Calendar className="w-6 h-6 text-red-600 mx-auto mb-2" />
               <p className="text-2xl font-bold text-gray-800">{classStats.classEngagement}%</p>
               <p className="text-sm text-gray-600">Engajamento</p>
             </div>
             <div className="bg-gray-50 p-4 rounded-lg text-center">
               <TrendingUp className="w-6 h-6 text-blue-600 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-gray-800">R$ {classStats.avgLucro}</p>
+              <p className="text-xl lg:text-2xl font-bold text-gray-800 break-words">{formatCurrency(classStats.avgLucro)}</p>
               <p className="text-sm text-gray-600">Lucro Médio</p>
             </div>
             <div className="bg-gray-50 p-4 rounded-lg text-center">
@@ -499,7 +504,7 @@ Engajamento da Turma: ${classStats.classEngagement}%
             </div>
             <div className="bg-gray-50 p-4 rounded-lg text-center">
               <Award className="w-6 h-6 text-yellow-600 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-gray-800">R$ {classStats.avgBonus}</p>
+              <p className="text-xl lg:text-2xl font-bold text-gray-800 break-words">{formatCurrency(classStats.avgBonus)}</p>
               <p className="text-sm text-gray-600">Bônus Médio</p>
             </div>
           </div>
@@ -559,7 +564,6 @@ Engajamento da Turma: ${classStats.classEngagement}%
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bônus Total</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Posição Geral</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Partidas</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -575,22 +579,13 @@ Engajamento da Turma: ${classStats.classEngagement}%
                         {getPurposeLabel(student.purpose)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">R$ {student.totalLucro}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrency(student.totalLucro)}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.avgSatisfacao}%</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">R$ {student.totalBonus}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrency(student.totalBonus)}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 flex items-center gap-1">
                       {getRankIcon(student.overallPosition)} {student.overallPosition}º
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.performance.totalMatchesPlayed}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => setShowMatchHistory(showMatchHistory === student.id ? null : student.id)}
-                        className="text-blue-600 hover:text-blue-900"
-                        title="Ver histórico de partidas"
-                      >
-                        {showMatchHistory === student.id ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                      </button>
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -615,9 +610,9 @@ Engajamento da Turma: ${classStats.classEngagement}%
                     {processedStudents.find(s => s.id === showMatchHistory)?.matchHistory.map((match, index) => (
                       <tr key={index}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{match.match_number}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">R$ {match.lucro || 0}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrency(match.lucro || 0)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{match.satisfacao || 0}%</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">R$ {match.bonus || 0}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrency(match.bonus || 0)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{format(new Date(match.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</td>
                       </tr>
                     ))}

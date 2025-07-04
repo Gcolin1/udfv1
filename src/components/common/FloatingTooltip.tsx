@@ -16,9 +16,9 @@ export function FloatingTooltip({ isVisible, content, position }: FloatingToolti
     <div
       className="fixed z-50 p-3 bg-gray-800 text-white text-xs rounded-md shadow-lg pointer-events-none transition-opacity duration-200"
       style={{
-        top: position.top - 10, // Position above the element
+        top: position.top - 10,
         left: position.left,
-        transform: 'translate(-50%, -100%)', // Center horizontally and position above
+        transform: 'translate(-50%, -100%)',
       }}
     >
       {content}

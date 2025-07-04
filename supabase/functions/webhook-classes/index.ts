@@ -20,24 +20,24 @@ serve(async (req) => {
     const {
       "event-type": eventType,
       "event-code": eventCode,
+      "event-name": eventName,
       schedule,
       "instructor-email": instructorEmail,
       "co-instructor-email": coInstructorEmail,
       influencer
     } = await req.json()
 
-    console.log('Payload recebido:', { eventType, eventCode, schedule, instructorEmail, coInstructorEmail, influencer })
+    console.log('Payload recebido:', { eventType, eventCode, eventName, schedule, instructorEmail, coInstructorEmail, influencer })
 
     if (!eventType || !eventCode || !schedule || !instructorEmail) {
       throw new Error('Campos obrigatórios ausentes: event-type, event-code, schedule, instructor-email')
     }
 
-    const validEventTypes = ['training', 'course']
+    const validEventTypes = ['training', 'group']
     if (!validEventTypes.includes(eventType)) {
-      throw new Error(`Tipo de evento inválido: ${eventType}. Deve ser 'training' ou 'course'.`)
+      throw new Error(`Tipo de evento inválido: ${eventType}. Deve ser 'training' ou 'group'.`)
     }
 
-    // Buscar instrutor
     const { data: instructorData, error: instructorError } = await supabaseClient
       .from('instructors')
       .select('id')
@@ -45,54 +45,69 @@ serve(async (req) => {
       .single()
 
     if (instructorError || !instructorData) {
-      console.error('Instrutor não encontrado:', instructorError)
       throw new Error(`Instrutor com e-mail ${instructorEmail} não encontrado`)
     }
 
     const instructorId = instructorData.id
 
-    // Co-instructor (apenas logado, não utilizado ainda)
     if (coInstructorEmail) {
-      console.log(`Co-instructor informado: ${coInstructorEmail} (não será vinculado ainda)`)
+      console.log(`Co-instructor informado (não vinculado ainda): ${coInstructorEmail}`)
     }
 
-    // Buscar influencer (opcional)
     let influencerId = null
     if (influencer) {
-      const { data: influencerData, error: influencerError } = await supabaseClient
+      const { data: influencerData } = await supabaseClient
         .from('influencers')
         .select('id')
         .eq('email', influencer)
         .single()
 
-      if (influencerError || !influencerData) {
-        console.warn(`Influencer com e-mail ${influencer} não encontrado. Continuar sem vincular.`)
-      } else {
+      if (influencerData) {
         influencerId = influencerData.id
+      } else {
+        console.warn(`Influencer com e-mail ${influencer} não encontrado. Ignorando.`)
       }
     }
 
-    // Calcular start_date e end_date com base no schedule
     let startDate = null
     let endDate = null
-
     if (Array.isArray(schedule) && schedule.length > 0) {
-      const sortedSchedule = [...schedule].sort((a: any, b: any) =>
+      const sorted = [...schedule].sort((a, b) =>
         new Date(a['initial-time']).getTime() - new Date(b['initial-time']).getTime()
       )
-      startDate = sortedSchedule[0]['initial-time']
-      endDate = sortedSchedule[sortedSchedule.length - 1]['end-time']
+      startDate = sorted[0]['initial-time']
+      endDate = sorted[sorted.length - 1]['end-time']
     }
 
-    // Upsert da turma
+    const { data: eventData, error: eventError } = await supabaseClient
+      .from('events')
+      .upsert({
+        code: eventCode,
+        name: eventName || eventCode,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'code'
+      })
+      .select()
+      .single()
+
+    if (eventError || !eventData) {
+      console.error('Erro ao criar/atualizar evento:', eventError)
+      throw new Error('Erro ao criar ou atualizar evento')
+    }
+
+    const eventId = eventData.id
+
     const { data: classData, error: classError } = await supabaseClient
       .from('classes')
       .upsert({
         code: eventCode,
         event_type: eventType,
-        schedule: schedule,
+        description: eventName || eventCode,
+        schedule,
         instructor_id: instructorId,
         influencer_id: influencerId,
+        event_id: eventId,
         start_date: startDate,
         end_date: endDate,
         updated_at: new Date().toISOString()
@@ -107,32 +122,31 @@ serve(async (req) => {
       throw new Error('Erro ao criar ou atualizar turma')
     }
 
-    console.log('Turma criada/atualizada:', classData)
+    console.log('Turma criada/atualizada com sucesso:', classData)
 
     return new Response(
       JSON.stringify({
         success: true,
-        class: classData,
-        message: 'Turma criada/atualizada com sucesso'
+        message: 'Turma criada/atualizada com sucesso',
+        class: classData
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      },
+        status: 200
+      }
     )
 
   } catch (error) {
-    console.error('Webhook error:', JSON.stringify(error, null, 2))
-    const errorMessage = error instanceof Error ? error.message : String(error)
+    console.error('Erro no webhook:', error)
     return new Response(
       JSON.stringify({
         success: false,
-        error: errorMessage
+        error: error instanceof Error ? error.message : String(error)
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      },
+        status: 400
+      }
     )
   }
 })

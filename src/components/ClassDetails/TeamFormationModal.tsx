@@ -47,13 +47,11 @@ export function TeamFormationModal({
   const [newTeamPurpose, setNewTeamPurpose] = useState<'lucro' | 'satisfacao' | 'bonus'>('lucro')
   const [selectedStudents, setSelectedStudents] = useState<string[]>([])
   
-  // Estado para aba ativa baseado na URL
   const [activeTab, setActiveTab] = useState<TabType>('formar-times')
   
   const [searchTerm, setSearchTerm] = useState('')
   const [teamSearchTerm, setTeamSearchTerm] = useState('')
 
-  // Função para extrair a aba da URL
   const getTabFromUrl = (): TabType => {
     const urlParams = new URLSearchParams(window.location.search)
     const tab = urlParams.get('tab') as TabType
@@ -61,23 +59,20 @@ export function TeamFormationModal({
     if (['formar-times', 'propositos', 'visualizar-times'].includes(tab)) {
       return tab
     }
-    return 'formar-times' // aba padrão
+    return 'formar-times'
   }
 
-  // Função para atualizar a URL quando mudar de aba
   const updateUrlTab = (tab: TabType) => {
     const url = new URL(window.location.href)
     url.searchParams.set('tab', tab)
     window.history.replaceState({}, '', url.toString())
   }
 
-  // Função para mudar de aba
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab)
     updateUrlTab(tab)
   }
 
-  // Effect para sincronizar com a URL quando o modal abrir
   useEffect(() => {
     if (isOpen) {
       const tabFromUrl = getTabFromUrl()
@@ -86,7 +81,6 @@ export function TeamFormationModal({
     }
   }, [isOpen, classId])
 
-  // Effect para escutar mudanças na URL (navegação do browser)
   useEffect(() => {
     const handlePopState = () => {
       if (isOpen) {
@@ -102,7 +96,6 @@ export function TeamFormationModal({
     }
   }, [isOpen])
 
-  // Função para limpar parâmetros da URL ao fechar o modal
   const handleClose = () => {
     const url = new URL(window.location.href)
     url.searchParams.delete('tab')
@@ -113,7 +106,6 @@ export function TeamFormationModal({
   const loadTeams = async () => {
     setIsLoading(true)
     try {
-      // Carregar times existentes
       const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
         .select('*')
@@ -122,7 +114,6 @@ export function TeamFormationModal({
 
       if (teamsError) throw teamsError
 
-      // Carregar estudantes com seus team_ids atualizados
       const { data: studentsData, error: studentsError } = await supabase
         .from('class_players')
         .select(`
@@ -141,13 +132,11 @@ export function TeamFormationModal({
         purpose: item.players?.purpose || null
       }))
 
-      // Organizar estudantes por time
       const teamsWithMembers = (teamsData || []).map(team => ({
         ...team,
         members: formattedStudents.filter(student => student.team_id === team.id)
       }))
 
-      // Estudantes não atribuídos a nenhum time
       const unassigned = formattedStudents.filter(student => !student.team_id)
 
       setTeams(teamsWithMembers)
@@ -169,7 +158,6 @@ export function TeamFormationModal({
 
     setIsLoading(true)
     try {
-      // Criar o time
       const { data: teamData, error: teamError } = await supabase
         .from('teams')
         .insert({
@@ -183,7 +171,6 @@ export function TeamFormationModal({
 
       if (teamError) throw teamError
 
-      // Atualizar team_id dos estudantes selecionados
       const { error: updateError } = await supabase
         .from('players')
         .update({ team_id: teamData.id })
@@ -232,7 +219,6 @@ export function TeamFormationModal({
 
     setIsLoading(true)
     try {
-      // Primeiro, remover team_id dos jogadores
       const { error: updateError } = await supabase
         .from('players')
         .update({ team_id: null })
@@ -240,7 +226,6 @@ export function TeamFormationModal({
 
       if (updateError) throw updateError
 
-      // Depois, excluir o time
       const { error: deleteError } = await supabase
         .from('teams')
         .delete()
@@ -259,7 +244,7 @@ export function TeamFormationModal({
     }
   }
 
-  const updateStudentPurpose = async (studentId: string, purpose: 'lucro' | 'satisfacao' | 'bonus') => {
+  const updateStudentPurpose = async (studentId: string, purpose: 'lucro' | 'satisfacao' | 'bonus' | null ) => {
     try {
       const { error } = await supabase
         .from('players')
@@ -295,7 +280,6 @@ export function TeamFormationModal({
     }
   }
 
-  // Filtros de busca
   const filteredUnassignedStudents = unassignedStudents.filter(student =>
     student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.email?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -319,7 +303,6 @@ export function TeamFormationModal({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
-        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
             <Users className="w-5 h-5" />
@@ -333,7 +316,6 @@ export function TeamFormationModal({
           </button>
         </div>
 
-        {/* Tabs Navigation */}
         <div className="border-b border-gray-200">
           <nav className="flex">
             <button
@@ -565,9 +547,13 @@ export function TeamFormationModal({
                             {getPurposeLabel(student.purpose)}
                           </span>
                           <select
-                            value={student.purpose || ''}
-                            onChange={(e) => updateStudentPurpose(student.id, e.target.value as 'lucro' | 'satisfacao' | 'bonus')}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            value={student.purpose ?? ''}
+                            onChange={(e) =>
+                              updateStudentPurpose(
+                                student.id,
+                                e.target.value === '' ? null : (e.target.value as 'lucro' | 'satisfacao' | 'bonus')
+                              )
+                            }
                           >
                             <option value="">Sem propósito</option>
                             <option value="lucro">Lucro</option>

@@ -1,5 +1,5 @@
 // src/pages/ClassDetailsPage.tsx
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Crown, Medal, Trophy, Users as UsersIcon } from 'lucide-react'
 import { format, startOfMonth, parseISO } from 'date-fns'
@@ -8,7 +8,6 @@ import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
-// Importando os componentes
 import { ClassOverview } from '../components/ClassDetails/ClassOverview'
 import { DetailedReport } from '../components/ClassDetails/DetailedReport'
 import { ClassInfoCard } from '../components/ClassDetails/ClassInfoCard'
@@ -20,9 +19,8 @@ import { ClassCodeCard } from '../components/ClassDetails/ClassCodeCard'
 import { FloatingTooltip } from '../components/common/FloatingTooltip'
 import { TeamFormationModal } from '../components/ClassDetails/TeamFormationModal'
 
-// Novos componentes
 import { ClassIndicators } from '../components/ClassDetails/ClassIndicators'
-import { ClassGrowthChart } from '../components/ClassDetails/ClassGrowthChart'
+import StudentGrowth from '../components/ClassDetails/ClassGrowthChart'
 
 interface Class {
   id: string
@@ -40,7 +38,6 @@ interface Class {
   event?: {
     name: string
     subject: string
-    difficulty: string
   }
   influencer?: {
     name: string
@@ -75,7 +72,7 @@ interface ScheduledDateInfo {
   date: Date
   initialTime: string
   endTime: string
-  description: string
+  description: string   
   index: number
 }
 
@@ -135,7 +132,6 @@ export function ClassDetailsPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'ranking' | 'indicators' | 'growth' | 'detailed-report'>('overview')
   const [showTeamFormation, setShowTeamFormation] = useState(false)
 
-  // Tooltip state
   const [tooltipInfo, setTooltipInfo] = useState<ScheduledDateInfo | null>(null)
   const [tooltipPosition, setTooltipPosition] = useState<{ top: number; left: number } | null>(null)
 
@@ -171,8 +167,6 @@ export function ClassDetailsPage() {
     setIsLoading(true)
 
     try {
-      // Carregar dados da turma
-      // CORREÇÃO (Passo 1): Query simplificada. A busca por 'instructors' foi removida.
       const { data: classData, error: classError } = await supabase
         .from('classes')
         .select(`
@@ -190,7 +184,6 @@ export function ClassDetailsPage() {
         return
       }
 
-      // Carregar estudantes com purpose
       const { data: studentsData, error: studentsError } = await supabase
         .from('class_players')
         .select(`
@@ -203,7 +196,6 @@ export function ClassDetailsPage() {
         console.error('Error loading students:', studentsError)
       }
 
-      // Carregar resultados das partidas
       const { data: matchResultsData, error: matchResultsError } = await supabase
         .from('match_results')
         .select(`
@@ -216,7 +208,6 @@ export function ClassDetailsPage() {
         console.error('Error loading match results:', matchResultsError)
       }
 
-      // Carregar times
       const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
         .select('*')
@@ -242,13 +233,11 @@ export function ClassDetailsPage() {
         player: Array.isArray(result.players) ? result.players[0] : result.players
       }))
 
-      // Organizar times com seus membros
       const teamsWithMembers = (teamsData || []).map(team => ({
         ...team,
         members: formattedStudents.filter(student => student.team_id === team.id)
       }))
 
-      // CORREÇÃO (Passo 2): Dados do instrutor são injetados a partir do usuário logado.
       setClassData({
         ...classData,
         event: Array.isArray(classData.events) ? classData.events[0] : classData.events,
@@ -262,7 +251,6 @@ export function ClassDetailsPage() {
       setMatchResults(formattedMatchResults)
       setTeams(teamsWithMembers)
 
-      // Processar cronograma
       const scheduleMap = new Map<string, ScheduledDateInfo>()
       if (classData.schedule && Array.isArray(classData.schedule) && classData.schedule.length > 0) {
         type Meeting = { 'initial-time': string; 'end-time': string }
@@ -575,24 +563,6 @@ export function ClassDetailsPage() {
     }
   }
 
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy': return 'bg-green-100 text-green-800'
-      case 'medium': return 'bg-yellow-100 text-yellow-800'
-      case 'hard': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getDifficultyLabel = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy': return 'Fácil'
-      case 'medium': return 'Médio'
-      case 'hard': return 'Difícil'
-      default: return difficulty
-    }
-  }
-
   const getEventTypeLabel = (eventType: string) => {
     switch (eventType) {
       case 'training': return 'Treinamento'
@@ -625,57 +595,13 @@ export function ClassDetailsPage() {
     return 'Ativa'
   }
 
-  const calculateStats = () => {
-    if (students.length === 0) {
-      return {
-        avgLucro: 0,
-        avgSatisfacao: 0,
-        avgBonus: 0,
-        engajamento: 0,
-        totalMatches: 0,
-        avgMatches: 0,
-        totalResults: 0,
-        avgTotal: 0
-      }
-    }
-
-    const totalLucro = matchResults.reduce((sum, result) => sum + (result.lucro || 0), 0)
-    const totalSatisfacao = matchResults.reduce((sum, result) => sum + (result.satisfacao || 0), 0)
-    const totalBonus = matchResults.reduce((sum, result) => sum + (result.bonus || 0), 0)
-    const totalResults = matchResults.length
-
-    const avgLucro = totalResults > 0 ? totalLucro / totalResults : 0
-    const avgSatisfacao = totalResults > 0 ? totalSatisfacao / totalResults : 0
-    const avgBonus = totalResults > 0 ? totalBonus / totalResults : 0
-    const avgTotal = avgLucro + avgSatisfacao + avgBonus
-
-    const uniqueMatchNumbers = [...new Set(matchResults.map(r => r.match_number))]
-    const totalUniqueMatches = uniqueMatchNumbers.length
-    const totalMatches = students.reduce((sum, student) => sum + student.total_matches, 0)
-    const avgMatches = students.length > 0 ? totalMatches / students.length : 0
-
-    const engajamento = students.length > 0 && totalUniqueMatches > 0
-      ? Math.min(100, Math.round((totalResults / (students.length * totalUniqueMatches)) * 100))
-      : 0
-
-    return {
-      avgLucro: Math.round(avgLucro),
-      avgSatisfacao: Math.round(avgSatisfacao),
-      avgBonus: Math.round(avgBonus),
-      engajamento,
-      totalMatches,
-      avgMatches: Math.round(avgMatches),
-      totalResults,
-      avgTotal: Math.round(avgTotal)
-    }
+  const exportStudentsToCsv = () => {
+  if (!students || students.length === 0) {
+    toast.error('Não há alunos para exportar.')
+    return
   }
 
-  const exportStudentsToCsv = () => {
-    if (!students || students.length === 0) {
-      toast.error('Não há alunos para exportar.')
-      return
-    }
-
+  try {
     const headers = ['Nome', 'Email', 'Total Partidas', 'Pontuação Média', 'Propósito', 'Time', 'Ingressou em']
     const csvRows = students.map(student => {
       const joinedAt = student.joined_at ? format(new Date(student.joined_at), 'dd/MM/yyyy', { locale: ptBR }) : ''
@@ -691,29 +617,31 @@ export function ClassDetailsPage() {
         student.avg_score,
         `"${purposeLabel}"`,
         `"${team?.name || 'Sem time'}"`,
-        joinedAt
+        `"${joinedAt}"`
       ].join(',')
     })
 
     const csvContent = [headers.join(','), ...csvRows].join('\n')
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
-    link.href = URL.createObjectURL(blob)
+    const url = URL.createObjectURL(blob)
+    
+    link.href = url
     link.setAttribute('download', `alunos_turma_${classData?.code || 'export'}.csv`)
+    link.style.visibility = 'hidden'
+    
     document.body.appendChild(link)
+    link.click()
     document.body.removeChild(link)
-    URL.revokeObjectURL(link.href)
+    
+    URL.revokeObjectURL(url)
+    
     toast.success('Lista de alunos exportada com sucesso!')
+  } catch (error) {
+    console.error('Erro ao exportar CSV:', error)
+    toast.error('Erro ao exportar lista de alunos')
   }
-
-  const getBarColor = (position: number) => {
-    switch (position) {
-      case 1: return '#FFD700'
-      case 2: return '#C0C0C0'
-      case 3: return '#CD7F32'
-      default: return '#3B82F6'
-    }
-  }
+}
 
   const getRankIcon = (position: number) => {
     switch (position) {
@@ -724,22 +652,46 @@ export function ClassDetailsPage() {
     }
   }
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload
-      return (
-        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-          <p className="font-semibold text-gray-800">{`${data.position}º - ${label}`}</p>
-          <p className="text-blue-600">{`Pontuação: ${data.score} pts`}</p>
-          <p className="text-gray-600">{`Partidas: ${data.matches}`}</p>
-          {data.isTeam && <p className="text-purple-600 text-xs">Time</p>}
-        </div>
-      )
+const stats = useMemo(() => {
+  if (students.length === 0) {
+    return {
+      avgLucro: 0, avgSatisfacao: 0, avgBonus: 0, engajamento: 0,
+      totalMatches: 0, avgMatches: 0, totalResults: 0, avgTotal: 0
     }
-    return null
   }
 
-  const stats = calculateStats()
+  const totalLucro = matchResults.reduce((sum, result) => sum + (result.lucro || 0), 0)
+  const totalSatisfacao = matchResults.reduce((sum, result) => sum + (result.satisfacao || 0), 0)
+  const totalBonus = matchResults.reduce((sum, result) => sum + (result.bonus || 0), 0)
+  
+  const totalParticipations = matchResults.length;
+
+  const avgLucro = totalParticipations > 0 ? totalLucro / totalParticipations : 0
+  const avgSatisfacao = totalParticipations > 0 ? totalSatisfacao / totalParticipations : 0
+  const avgBonus = totalParticipations > 0 ? totalBonus / totalParticipations : 0
+  const avgTotal = avgLucro + avgSatisfacao + avgBonus
+
+  const uniqueMatchNumbers = [...new Set(matchResults.map(r => r.match_number))]
+  const totalUniqueMatches = uniqueMatchNumbers.length
+  
+  const avgMatches = students.length > 0 ? totalParticipations / students.length : 0
+
+  const engajamento = students.length > 0 && totalUniqueMatches > 0
+    ? Math.min(100, Math.round((totalParticipations / (students.length * totalUniqueMatches)) * 100))
+    : 0
+
+  return {
+    avgLucro: Math.round(avgLucro),
+    avgSatisfacao: Math.round(avgSatisfacao),
+    avgBonus: Math.round(avgBonus),
+    engajamento,
+    totalMatches: totalUniqueMatches,
+    avgMatches: parseFloat(avgMatches.toFixed(1)),
+    totalResults: totalParticipations,
+    avgTotal: Math.round(avgTotal)
+  }
+}, [students, matchResults]);
+
 
   if (isLoading) {
     return (
@@ -858,7 +810,7 @@ export function ClassDetailsPage() {
           {/* Tab Content */}
           {activeTab === 'overview' && (
             <>
-              <ClassOverview students={students} stats={stats} />
+            <ClassOverview studentIndicators={studentIndicators} stats={stats} />
 
               <ClassInfoCard
                 classData={classData}
@@ -876,9 +828,7 @@ export function ClassDetailsPage() {
               {rankingData.length > 0 ? (
                 <ClassRankingChart
                   rankingData={rankingData}
-                  getBarColor={getBarColor}
                   getRankIcon={getRankIcon}
-                  CustomTooltip={CustomTooltip}
                 />
               ) : (
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
@@ -896,7 +846,7 @@ export function ClassDetailsPage() {
           )}
 
           {activeTab === 'growth' && (
-            <ClassGrowthChart
+            <StudentGrowth 
               students={students}
               matchResults={matchResults}
             />
@@ -929,10 +879,7 @@ export function ClassDetailsPage() {
           />
 
           <ClassSidebar
-            classData={classData}
             exportStudentsToCsv={exportStudentsToCsv}
-            getDifficultyColor={getDifficultyColor}
-            getDifficultyLabel={getDifficultyLabel}
             onViewDetailedReport={() => setActiveTab('detailed-report')}
           />
         </div>
