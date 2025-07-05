@@ -21,6 +21,7 @@ import { TeamFormationModal } from '../components/ClassDetails/TeamFormationModa
 
 import { ClassIndicators } from '../components/ClassDetails/ClassIndicators'
 import StudentGrowth from '../components/ClassDetails/ClassGrowthChart'
+import { NotificationBell } from '../components/NotificationBell'
 
 interface Class {
   id: string
@@ -131,6 +132,7 @@ export function ClassDetailsPage() {
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()))
   const [activeTab, setActiveTab] = useState<'overview' | 'ranking' | 'indicators' | 'growth' | 'detailed-report'>('overview')
   const [showTeamFormation, setShowTeamFormation] = useState(false)
+  const [alertsCount, setAlertsCount] = useState(0)
 
   const [tooltipInfo, setTooltipInfo] = useState<ScheduledDateInfo | null>(null)
   const [tooltipPosition, setTooltipPosition] = useState<{ top: number; left: number } | null>(null)
@@ -147,6 +149,13 @@ export function ClassDetailsPage() {
       calculateStudentIndicators()
     }
   }, [students, matchResults, teams])
+
+  useEffect(() => {
+    // Calcular alertas baseado nos studentIndicators
+    const criticalCount = studentIndicators.filter(s => s.statusColor === 'red').length
+    const lowPerformanceCount = studentIndicators.filter(s => s.statusColor === 'yellow').length
+    setAlertsCount(criticalCount + lowPerformanceCount)
+  }, [studentIndicators])
 
   const handleShowTooltip = (info: ScheduledDateInfo | null, rect: DOMRect | null) => {
     if (info && rect) {
@@ -739,14 +748,17 @@ const stats = useMemo(() => {
           </div>
         </div>
 
-        {/* Botão de Formar Times */}
-        <button
-          onClick={() => setShowTeamFormation(true)}
-          className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 font-medium"
-        >
-          <UsersIcon className="w-5 h-5" />
-          Gerenciar Turma
-        </button>
+        {/* Botão de Formar Times e Sino de Notificações */}
+        <div className="flex items-center gap-3">
+          <NotificationBell alertsCount={alertsCount} classId={id} />
+          <button
+            onClick={() => setShowTeamFormation(true)}
+            className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 font-medium"
+          >
+            <UsersIcon className="w-5 h-5" />
+            Gerenciar Turma
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
