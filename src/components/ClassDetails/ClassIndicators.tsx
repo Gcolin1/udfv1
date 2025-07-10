@@ -16,6 +16,8 @@ interface StudentIndicator {
   satisfacaoPosition: number
   bonusPosition: number
   totalPosition: number
+  hasParticipated: boolean
+  individualEngagement: number
 }
 
 interface ClassIndicatorsProps {
@@ -39,13 +41,20 @@ export function ClassIndicators({ studentIndicators, isLoading }: ClassIndicator
     }).format(value)
   }
 
+  // Função para determinar o propósito efetivo do estudante (individual ou do time)
+  const getEffectivePurpose = (student: StudentIndicator): 'lucro' | 'satisfacao' | 'bonus' | null => {
+    // Retorna o propósito individual ou do time
+    return student.purpose || student.groupPurpose
+  }
+
   const getFilteredAndSortedStudents = () => {
     let filtered = studentIndicators.filter(student => {
       const matchesSearchTerm = searchTerm === '' ||
         student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.email?.toLowerCase().includes(searchTerm.toLowerCase())
 
-      const matchesPurpose = purposeFilter === 'todos' || student.purpose === purposeFilter
+      const effectivePurpose = getEffectivePurpose(student)
+      const matchesPurpose = purposeFilter === 'todos' || effectivePurpose === purposeFilter
 
       return matchesSearchTerm && matchesPurpose
     })
@@ -231,11 +240,11 @@ export function ClassIndicators({ studentIndicators, isLoading }: ClassIndicator
     }
   }
 
-  const getStatusLabel = (color: 'green' | 'yellow' | 'red') => {
+  const getStatusLabel = (color: 'green' | 'yellow' | 'red', hasParticipated: boolean = true) => {
     switch (color) {
-      case 'green': return 'Cumprindo objetivo'
-      case 'yellow': return 'Parcialmente'
-      case 'red': return 'Abaixo do esperado'
+      case 'green': return 'Excelente (performance + engajamento)'
+      case 'yellow': return 'Bom (performance ou engajamento mediano)'
+      case 'red': return hasParticipated ? 'Precisa melhorar' : 'Não participou'
       default: return 'Indefinido'
     }
   }
@@ -329,6 +338,35 @@ export function ClassIndicators({ studentIndicators, isLoading }: ClassIndicator
         </div>
         {/* --- FIM DA SEÇÃO DE FILTROS --- */}
 
+        {/* --- LEGENDA DOS INDICADORES DE STATUS --- */}
+        <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+          <h3 className="text-sm font-medium text-gray-700 mb-2">📊 Legenda dos Indicadores de Status:</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-green-500 rounded-full flex-shrink-0"></div>
+              <span className="text-gray-700">
+                <strong>Verde:</strong> Excelente (≥80% performance + engajamento)
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-yellow-500 rounded-full flex-shrink-0"></div>
+              <span className="text-gray-700">
+                <strong>Amarelo:</strong> Bom (50-79% performance + engajamento)
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-red-500 rounded-full flex-shrink-0"></div>
+              <span className="text-gray-700">
+                <strong>Vermelho:</strong> Precisa melhorar (&lt;50%) ou não participou
+              </span>
+            </div>
+          </div>
+          <p className="text-xs text-gray-600 mt-2">
+            <em>* Cálculo baseado em 70% performance no propósito + 30% engajamento (frequência)</em>
+          </p>
+        </div>
+        {/* --- FIM DA LEGENDA --- */}
+
         {/* --- Renderização dos cards no formato de ranking --- */}
         <div className="space-y-3">
           {paginatedIndicators.map((student, index) => {
@@ -350,8 +388,8 @@ export function ClassIndicators({ studentIndicators, isLoading }: ClassIndicator
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold text-gray-800 truncate">{student.name}</h3>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPurposeColor(student.purpose)}`}>
-                          {getPurposeLabel(student.purpose)}
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPurposeColor(getEffectivePurpose(student))}`}>
+                          {getPurposeLabel(getEffectivePurpose(student))}
                         </span>
                       </div>
                       <p className="text-xs text-gray-500 truncate" title={student.email || ''}>{student.email}</p>
@@ -367,7 +405,12 @@ export function ClassIndicators({ studentIndicators, isLoading }: ClassIndicator
                   </div>
                   
                   {/* Indicador de status */}
-                  <div className={`w-3 h-3 rounded-full flex-shrink-0 ${getStatusColor(student.statusColor)}`} title={getStatusLabel(student.statusColor)}></div>
+                  <div className="relative group">
+                    <div className={`w-3 h-3 rounded-full flex-shrink-0 cursor-help ${getStatusColor(student.statusColor)}`}></div>
+                    <div className="absolute bottom-full right-0 mb-2 w-max max-w-xs px-3 py-1.5 text-sm font-medium text-white bg-gray-800 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
+                      {getStatusLabel(student.statusColor, student.hasParticipated)}
+                    </div>
+                  </div>
                 </div>
                 
                 {/* Detalhes expandidos - apenas para "todos" */}

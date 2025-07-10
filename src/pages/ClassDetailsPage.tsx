@@ -22,6 +22,7 @@ import { TeamFormationModal } from '../components/ClassDetails/TeamFormationModa
 import { ClassIndicators } from '../components/ClassDetails/ClassIndicators'
 import StudentGrowth from '../components/ClassDetails/ClassGrowthChart'
 import { NotificationBell } from '../components/NotificationBell'
+import { calculateStudentAlerts, getTotalAlertsCount } from '../utils/alertCalculations'
 
 interface Class {
   id: string
@@ -58,6 +59,7 @@ interface Student {
   total_matches: number
   avg_score: number
   purpose: 'lucro' | 'satisfacao' | 'bonus' | null
+  color: number
   team_id: string | null
 }
 
@@ -115,6 +117,8 @@ interface StudentIndicator {
   bonusPosition: number
   totalPosition: number
   isTeam?: boolean
+  hasParticipated: boolean
+  individualEngagement: number
 }
 
 export function ClassDetailsPage() {
@@ -151,11 +155,13 @@ export function ClassDetailsPage() {
   }, [students, matchResults, teams])
 
   useEffect(() => {
-    // Calcular alertas baseado nos studentIndicators
-    const criticalCount = studentIndicators.filter(s => s.statusColor === 'red').length
-    const lowPerformanceCount = studentIndicators.filter(s => s.statusColor === 'yellow').length
-    setAlertsCount(criticalCount + lowPerformanceCount)
-  }, [studentIndicators])
+    // Calcular alertas usando a mesma lógica do AlertsModal
+    if (students.length > 0 && studentIndicators.length > 0) {
+      const alerts = calculateStudentAlerts(students, matchResults, teams)
+      const totalAlerts = getTotalAlertsCount(alerts)
+      setAlertsCount(totalAlerts)
+    }
+  }, [students, matchResults, teams, studentIndicators])
 
   const handleShowTooltip = (info: ScheduledDateInfo | null, rect: DOMRect | null) => {
     if (info && rect) {
@@ -197,7 +203,7 @@ export function ClassDetailsPage() {
         .from('class_players')
         .select(`
           *,
-          players:player_id (id, name, email, purpose, team_id)
+          players:player_id (id, name, email, purpose, color, team_id)
         `)
         .eq('class_id', id)
 
@@ -234,6 +240,7 @@ export function ClassDetailsPage() {
         total_matches: item.total_matches || 0,
         avg_score: item.avg_score || 0,
         purpose: item.players?.purpose || null,
+        color: item.players?.color || 1,
         team_id: item.players?.team_id || null
       }))
 
@@ -494,8 +501,9 @@ export function ClassDetailsPage() {
   }
 
   const calculateStudentIndicators = () => {
-    if (students.length === 0 || matchResults.length === 0) return
+    if (students.length === 0) return
 
+    // Primeiro, calcula todas as métricas básicas
     const indicators = students.map(student => {
       const studentResults = matchResults.filter(result => result.player_id === student.id)
 
@@ -511,27 +519,11 @@ export function ClassDetailsPage() {
         team.members.some(member => member.id === student.id)
       )
 
-      let statusColor: 'green' | 'yellow' | 'red' = 'yellow'
-      const purpose = student.purpose || studentTeam?.group_purpose
-
-      if (purpose) {
-        let targetValue = 0
-        switch (purpose) {
-          case 'lucro':
-            targetValue = totalLucro
-            break
-          case 'satisfacao':
-            targetValue = avgSatisfacao
-            break
-          case 'bonus':
-            targetValue = totalBonus
-            break
-        }
-
-        if (targetValue >= 80) statusColor = 'green'
-        else if (targetValue >= 50) statusColor = 'yellow'
-        else statusColor = 'red'
-      }
+      // Calcular engajamento individual
+      const totalUniqueMatches = [...new Set(matchResults.map(r => r.match_number))].length
+      const individualEngagement = totalUniqueMatches > 0 
+        ? Math.min(100, Math.round((studentResults.length / totalUniqueMatches) * 100))
+        : 0
 
       return {
         id: student.id,
@@ -542,12 +534,66 @@ export function ClassDetailsPage() {
         totalBonus,
         purpose: student.purpose,
         groupPurpose: studentTeam?.group_purpose || null,
-        statusColor,
+        statusColor: 'red' as 'green' | 'yellow' | 'red',
         lucroPosition: 0,
         satisfacaoPosition: 0,
         bonusPosition: 0,
         totalPosition: 0,
-        isTeam: !!student.team_id
+        isTeam: !!student.team_id,
+        hasParticipated: studentResults.length > 0,
+        individualEngagement
+      }
+    })
+
+    // Calcular médias da turma para comparação relativa
+    const participatingStudents = indicators.filter(s => s.hasParticipated)
+    const classAverages = {
+      lucro: participatingStudents.length > 0 ? participatingStudents.reduce((sum, s) => sum + s.totalLucro, 0) / participatingStudents.length : 0,
+      satisfacao: participatingStudents.length > 0 ? participatingStudents.reduce((sum, s) => sum + s.avgSatisfacao, 0) / participatingStudents.length : 0,
+      bonus: participatingStudents.length > 0 ? participatingStudents.reduce((sum, s) => sum + s.totalBonus, 0) / participatingStudents.length : 0,
+    }
+
+    // Calcular statusColor baseado em performance + engajamento
+    indicators.forEach(indicator => {
+      const purpose = indicator.purpose || indicator.groupPurpose
+
+      // Se o aluno não participou, status vermelho
+      if (!indicator.hasParticipated) {
+        indicator.statusColor = 'red'
+        return
+      }
+
+      // Calcular performance relativa (comparado com média da turma)
+      let performancePercentage = 0
+      if (purpose && classAverages[purpose] > 0) {
+        let currentValue = 0
+        switch (purpose) {
+          case 'lucro':
+            currentValue = indicator.totalLucro
+            break
+          case 'satisfacao':
+            currentValue = indicator.avgSatisfacao
+            break
+          case 'bonus':
+            currentValue = indicator.totalBonus
+            break
+        }
+        performancePercentage = (currentValue / classAverages[purpose]) * 100
+      }
+
+      // Combinar performance + engajamento
+      const engagementWeight = 0.3 // 30% peso para engajamento
+      const performanceWeight = 0.7 // 70% peso para performance
+      
+      const combinedScore = (performancePercentage * performanceWeight) + (indicator.individualEngagement * engagementWeight)
+
+      // Definir status baseado no score combinado
+      if (combinedScore >= 80) {
+        indicator.statusColor = 'green'
+      } else if (combinedScore >= 50) {
+        indicator.statusColor = 'yellow'
+      } else {
+        indicator.statusColor = 'red'
       }
     })
 
@@ -861,6 +907,7 @@ const stats = useMemo(() => {
             <StudentGrowth 
               students={students}
               matchResults={matchResults}
+              teams={teams}
             />
           )}
 

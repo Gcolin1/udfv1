@@ -14,7 +14,12 @@ interface GrowthData {
 interface Student {
   id: string
   name: string | null
-  focus?: string
+  email: string | null
+  joined_at: string | null
+  total_matches: number
+  avg_score: number
+  purpose: 'lucro' | 'satisfacao' | 'bonus' | null
+  team_id: string | null
 }
 
 interface MatchResult {
@@ -25,11 +30,20 @@ interface MatchResult {
   bonus: number | null
 }
 
+interface Team {
+  id: string
+  name: string | null
+  group_purpose: 'lucro' | 'satisfacao' | 'bonus' | null
+  class_id: string
+  members: Student[]
+}
+
 interface StudentGrowthProps {
   students: Student[]
   matchResults: MatchResult[]
+  teams?: Team[]
 }
-export default function StudentGrowth({ students, matchResults }: StudentGrowthProps) {
+export default function StudentGrowth({ students, matchResults, teams = [] }: StudentGrowthProps) {
   const [selectedIndicator, setSelectedIndicator] = useState<Indicator>('geral')
   const [selectedStudents, setSelectedStudents] = useState<string[]>([])
   const [growthData, setGrowthData] = useState<GrowthData[]>([])
@@ -42,27 +56,43 @@ export default function StudentGrowth({ students, matchResults }: StudentGrowthP
   const [minMatches, setMinMatches] = useState(0)
   const [sortBy, setSortBy] = useState<'name' | 'matches' | 'performance'>('name')
 
+  // Função para determinar o propósito efetivo do estudante (individual ou do time)
+  const getEffectivePurpose = (student: Student): 'lucro' | 'satisfacao' | 'bonus' | null => {
+    if (student.purpose) return student.purpose
+    
+    const studentTeam = teams.find(team => 
+      team.members.some(member => member.id === student.id)
+    )
+    
+    return studentTeam?.group_purpose || null
+  }
+
   // Filtra alunos baseado no indicador selecionado
   const filteredStudents = useMemo(() => {
     if (selectedIndicator === 'geral') return students
     
     return students.filter(student => {
+      // Primeiro verifica se o aluno tem o propósito correspondente ao indicador
+      const effectivePurpose = getEffectivePurpose(student)
+      if (effectivePurpose !== selectedIndicator) return false
+      
+      // Depois verifica se tem resultados para o indicador específico (opcional)
       const studentResults = matchResults.filter(result => result.player_id === student.id)
-      if (studentResults.length === 0) return false
+      if (studentResults.length === 0) return true // Inclui alunos sem resultados se tiverem o propósito correto
       
       // Verifica se o aluno tem resultados para o indicador específico
       switch (selectedIndicator) {
         case 'lucro':
-          return studentResults.some(result => (result.lucro || 0) > 0)
+          return studentResults.some(result => (result.lucro || 0) >= 0)
         case 'satisfacao':
-          return studentResults.some(result => (result.satisfacao || 0) > 0)
+          return studentResults.some(result => (result.satisfacao || 0) >= 0)
         case 'bonus':
-          return studentResults.some(result => (result.bonus || 0) > 0)
+          return studentResults.some(result => (result.bonus || 0) >= 0)
         default:
           return true
       }
     })
-  }, [students, matchResults, selectedIndicator])
+  }, [students, matchResults, selectedIndicator, teams])
 
   // Função para calcular estatísticas do aluno
   const getStudentStats = (studentId: string) => {

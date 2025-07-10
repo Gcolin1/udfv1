@@ -296,11 +296,14 @@ export function DetailedReport({ classData, students, matchResults, teams }: Det
 
   const classStats = useMemo(() => {
     const totalLucro = processedStudents.reduce((sum, s) => sum + s.totalLucro, 0)
-    const totalSatisfacao = processedStudents.reduce((sum, s) => sum + s.avgSatisfacao, 0)
     const totalBonus = processedStudents.reduce((sum, s) => sum + s.totalBonus, 0)
     const totalMatchesPlayed = matchResults.length
     const uniquePlayers = students.length
     const totalTeams = teams.length
+
+    // Use o mesmo método do ClassOverview para satisfação média
+    const totalSatisfacaoFromResults = matchResults.reduce((sum, result) => sum + (result.satisfacao || 0), 0)
+    const avgSatisfacaoFromResults = totalMatchesPlayed > 0 ? totalSatisfacaoFromResults / totalMatchesPlayed : 0
 
     const totalParticipations = matchResults.length;
     const uniqueMatchNumbers = [...new Set(matchResults.map(r => r.match_number))];
@@ -315,8 +318,8 @@ export function DetailedReport({ classData, students, matchResults, teams }: Det
     return {
       totalLucro: Math.round(totalLucro),
       avgLucro: uniquePlayers > 0 ? Math.round(totalLucro / uniquePlayers) : 0,
-      totalSatisfacao: Math.round(totalSatisfacao),
-      avgSatisfacao: uniquePlayers > 0 ? Math.round(totalSatisfacao / uniquePlayers) : 0,
+      totalSatisfacao: Math.round(totalSatisfacaoFromResults),
+      avgSatisfacao: Math.round(avgSatisfacaoFromResults),
       totalBonus: Math.round(totalBonus),
       avgBonus: uniquePlayers > 0 ? Math.round(totalBonus / uniquePlayers) : 0,
       totalMatchesPlayed,

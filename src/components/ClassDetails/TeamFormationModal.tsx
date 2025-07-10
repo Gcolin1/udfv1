@@ -118,7 +118,7 @@ export function TeamFormationModal({
         .from('class_players')
         .select(`
           *,
-          players:player_id (id, name, email, team_id, purpose)
+          players:player_id (id, name, email, color, team_id, purpose)
         `)
         .eq('class_id', classId)
 

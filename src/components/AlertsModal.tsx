@@ -1,7 +1,8 @@
-import { X, AlertTriangle, TrendingDown, Trophy, Users, UserX } from 'lucide-react'
+import { X, AlertTriangle, TrendingDown, Trophy, Users, UserX, Star } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { calculateStudentAlerts } from '../utils/alertCalculations'
 
 interface AlertsModalProps {
   isOpen: boolean
@@ -12,11 +13,25 @@ interface AlertsModalProps {
 interface AlertData {
   criticalCount: number
   lowPerformanceCount: number
-  bestPerformer: string
-  bestPerformerProfit: number
-  bestPerformerSatisfaction: number
-  engagementRate: number
   inactiveCount: number
+  criticalStudents: Array<{
+    name: string
+    purpose: string
+    value: number
+    statusColor: 'green' | 'yellow' | 'red'
+  }>
+  lowPerformanceStudents: Array<{
+    name: string
+    purpose: string
+    value: number
+    statusColor: 'green' | 'yellow' | 'red'
+  }>
+  inactiveStudents: Array<{
+    name: string
+  }>
+  bestPerformer: string
+  bestPerformerScore: number
+  engagementRate: number
 }
 
 export function AlertsModal({ isOpen, onClose, classId }: AlertsModalProps) {
@@ -24,11 +39,13 @@ export function AlertsModal({ isOpen, onClose, classId }: AlertsModalProps) {
   const [alertData, setAlertData] = useState<AlertData>({
     criticalCount: 0,
     lowPerformanceCount: 0,
+    inactiveCount: 0,
+    criticalStudents: [],
+    lowPerformanceStudents: [],
+    inactiveStudents: [],
     bestPerformer: '',
-    bestPerformerProfit: 0,
-    bestPerformerSatisfaction: 0,
-    engagementRate: 0,
-    inactiveCount: 0
+    bestPerformerScore: 0,
+    engagementRate: 0
   })
   const [isLoading, setIsLoading] = useState(false)
 
@@ -67,104 +84,104 @@ export function AlertsModal({ isOpen, onClose, classId }: AlertsModalProps) {
         return
       }
 
-      let totalCriticalCount = 0
-      let totalLowPerformanceCount = 0
-      let globalBestPerformer = ''
-      let globalBestPerformerProfit = 0
-      let globalBestPerformerSatisfaction = 0
-      let totalInactiveCount = 0
+      let allCriticalStudents: any[] = []
+      let allLowPerformanceStudents: any[] = []
+      let allInactiveStudents: any[] = []
+      let bestPerformer = ''
+      let bestPerformerScore = 0
       let totalEngagementSum = 0
       let classesWithData = 0
 
-      // Processar cada turma individualmente para calcular engajamento corretamente
-      for (const classItem of classes) {
-        const classId = classItem.id
-
-        // Buscar dados específicos desta turma
-        const { data: playersData } = await supabase
+      // Buscar todos os dados de uma vez para eliminar N+1 queries
+      const classIds = classes.map(c => c.id)
+      
+      const [playersResponse, matchResultsResponse, teamsResponse] = await Promise.all([
+        supabase
           .from('class_players')
           .select(`
             *,
-            players:player_id (id, name, email, purpose, team_id)
+            players:player_id (id, name, email, purpose, color, team_id)
           `)
-          .eq('class_id', classId)
-
-        const { data: matchResultsData } = await supabase
+          .in('class_id', classIds),
+        supabase
           .from('match_results')
           .select('*')
-          .eq('class_id', classId)
-
-        const { data: teamsData } = await supabase
+          .in('class_id', classIds),
+        supabase
           .from('teams')
           .select('*')
-          .eq('class_id', classId)
+          .in('class_id', classIds)
+      ])
+
+      // Agrupar dados por turma
+      const playersDataByClass = new Map()
+      const matchResultsDataByClass = new Map()
+      const teamsDataByClass = new Map()
+
+      playersResponse.data?.forEach(player => {
+        if (!playersDataByClass.has(player.class_id)) {
+          playersDataByClass.set(player.class_id, [])
+        }
+        playersDataByClass.get(player.class_id).push(player)
+      })
+
+      matchResultsResponse.data?.forEach(result => {
+        if (!matchResultsDataByClass.has(result.class_id)) {
+          matchResultsDataByClass.set(result.class_id, [])
+        }
+        matchResultsDataByClass.get(result.class_id).push(result)
+      })
+
+      teamsResponse.data?.forEach(team => {
+        if (!teamsDataByClass.has(team.class_id)) {
+          teamsDataByClass.set(team.class_id, [])
+        }
+        teamsDataByClass.get(team.class_id).push(team)
+      })
+
+      // Processar cada turma com os dados já carregados
+      for (const classItem of classes) {
+        const currentClassId = classItem.id
+        const playersData = playersDataByClass.get(currentClassId) || []
+        const matchResultsData = matchResultsDataByClass.get(currentClassId) || []
+        const teamsData = teamsDataByClass.get(currentClassId) || []
         
-        if (!playersData?.length || !matchResultsData?.length) {
+        if (!playersData.length) {
           continue
         }
 
         classesWithData++
         
-        playersData.forEach(playerData => {
-          const player = playerData.players
-          if (!player) return
-          
-          const playerResults = matchResultsData.filter(result => result.player_id === player.id)
-          
-          // Se não tem resultados, é inativo
-          if (playerResults.length === 0) {
-            totalInactiveCount++
-            return
-          }
-          
-          // Calcular métricas
-          const totalLucro = playerResults.reduce((sum, result) => sum + (result.lucro || 0), 0)
-          const satisfacaoResults = playerResults.filter(result => result.satisfacao !== null)
-          const totalSatisfacao = satisfacaoResults.reduce((sum, result) => sum + (result.satisfacao || 0), 0)
-          const avgSatisfacao = satisfacaoResults.length > 0 ? totalSatisfacao / satisfacaoResults.length : 0
-          const totalBonus = playerResults.reduce((sum, result) => sum + (result.bonus || 0), 0)
-          
-          // Determinar status baseado no propósito (mesma lógica do ClassIndicators)
-          const playerTeam = teamsData?.find(team => 
-            team.members?.some((member: any) => member.id === player.id)
-          )
-          const purpose = player.purpose || playerTeam?.group_purpose
-          
-          if (purpose) {
-            let targetValue = 0
-            switch (purpose) {
-              case 'lucro': 
-                targetValue = totalLucro
-                break
-              case 'satisfacao': 
-                targetValue = avgSatisfacao
-                break
-              case 'bonus': 
-                targetValue = totalBonus
-                break
-            }
-            
-            // Aplicar a mesma lógica do ClassIndicators
-            if (targetValue < 50) {
-              totalCriticalCount++ // Vermelho - Abaixo do esperado
-            } else if (targetValue < 80) {
-              totalLowPerformanceCount++ // Amarelo - Parcialmente
-            }
-            // Verde >= 80 não conta como alerta
-          }
-          
-          // Encontrar melhor performer global (baseado em lucro total)
-          if (totalLucro > globalBestPerformerProfit) {
-            globalBestPerformer = player.name || 'Sem nome'
-            globalBestPerformerProfit = totalLucro
-            globalBestPerformerSatisfaction = Math.round(avgSatisfacao)
+        // Transformar dados para o formato esperado pela função de cálculo
+        const students = playersData.map((p: any) => p.players).filter(Boolean)
+        const matchResults = matchResultsData
+        
+        // Populate team members manually like ClassDetailsPage does
+        const teams = teamsData.map((team: any) => ({
+          ...team,
+          members: students.filter((student: any) => student.team_id === team.id)
+        }))
+
+        // Usar a função compartilhada para calcular alertas
+        const alerts = calculateStudentAlerts(students, matchResults, teams)
+        
+        // Agregar resultados
+        allCriticalStudents.push(...alerts.criticalStudents)
+        allLowPerformanceStudents.push(...alerts.lowPerformanceStudents)
+        allInactiveStudents.push(...alerts.inactiveStudents)
+
+        // Encontrar melhor performer (baseado no maior score combinado)
+        alerts.criticalStudents.concat(alerts.lowPerformanceStudents).forEach(student => {
+          if (student.value > bestPerformerScore) {
+            bestPerformer = student.name
+            bestPerformerScore = student.value
           }
         })
         
-        // Calcular engajamento desta turma usando a mesma lógica do ClassDetailsPage
-        const classPlayers = playersData.length
-        const classParticipations = matchResultsData.length
-        const uniqueMatchNumbers = [...new Set(matchResultsData.map(r => r.match_number))]
+        // Calcular engajamento desta turma
+        const classPlayers = students.length
+        const classParticipations = matchResults.length
+        const uniqueMatchNumbers = [...new Set(matchResults.map((r: any) => r.match_number))]
         const classUniqueMatches = uniqueMatchNumbers.length
         
         if (classPlayers > 0 && classUniqueMatches > 0) {
@@ -177,13 +194,15 @@ export function AlertsModal({ isOpen, onClose, classId }: AlertsModalProps) {
       const avgEngagementRate = classesWithData > 0 ? Math.round(totalEngagementSum / classesWithData) : 0
       
       setAlertData({
-        criticalCount: totalCriticalCount,
-        lowPerformanceCount: totalLowPerformanceCount,
-        bestPerformer: globalBestPerformer,
-        bestPerformerProfit: globalBestPerformerProfit,
-        bestPerformerSatisfaction: globalBestPerformerSatisfaction,
-        engagementRate: avgEngagementRate,
-        inactiveCount: totalInactiveCount
+        criticalCount: allCriticalStudents.length,
+        lowPerformanceCount: allLowPerformanceStudents.length,
+        inactiveCount: allInactiveStudents.length,
+        criticalStudents: allCriticalStudents,
+        lowPerformanceStudents: allLowPerformanceStudents,
+        inactiveStudents: allInactiveStudents,
+        bestPerformer,
+        bestPerformerScore,
+        engagementRate: avgEngagementRate
       })
     } catch (error) {
       console.error('Erro ao carregar dados de alertas:', error)
@@ -192,7 +211,13 @@ export function AlertsModal({ isOpen, onClose, classId }: AlertsModalProps) {
     }
   }
 
-  const totalAlerts = alertData.criticalCount + alertData.lowPerformanceCount
+
+  // Contagem total de alertas (todos são problemas que precisam atenção)
+  const totalAlerts = alertData.criticalCount + alertData.lowPerformanceCount + alertData.inactiveCount
+  
+  // Adicionar alerta de engajamento baixo se necessário
+  const hasLowEngagement = alertData.engagementRate < 70
+  const totalItems = totalAlerts + (hasLowEngagement ? 1 : 0)
 
   if (!isOpen) return null
 
@@ -201,7 +226,7 @@ export function AlertsModal({ isOpen, onClose, classId }: AlertsModalProps) {
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b">
           <h2 className="text-xl font-bold text-gray-800">
-            Alertas de Desempenho ({totalAlerts})
+            Notificações ({totalItems})
           </h2>
           <button
             onClick={onClose}
@@ -218,6 +243,34 @@ export function AlertsModal({ isOpen, onClose, classId }: AlertsModalProps) {
             </div>
           ) : (
             <>
+              {/* Melhor Performer */}
+              {alertData.bestPerformer && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center mb-2">
+                    <Star className="w-5 h-5 text-blue-500 mr-2" />
+                    <h3 className="font-semibold text-blue-800">Melhor Desempenho</h3>
+                  </div>
+                  <p className="text-blue-700">
+                    <span className="font-semibold">{alertData.bestPerformer}</span> tem o melhor score combinado ({alertData.bestPerformerScore})
+                  </p>
+                </div>
+              )}
+
+              {/* Engajamento Baixo */}
+              {hasLowEngagement && (
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                  <div className="flex items-center mb-2">
+                    <TrendingDown className="w-5 h-5 text-orange-500 mr-2" />
+                    <h3 className="font-semibold text-orange-800">Engajamento Baixo</h3>
+                  </div>
+                  <p className="text-orange-700">
+                    Taxa de engajamento média: <span className="font-semibold">{alertData.engagementRate}%</span>
+                  </p>
+                  <p className="text-sm text-orange-600">Considere estratégias para aumentar a participação</p>
+                </div>
+              )}
+
+              {/* Alertas críticos e de baixo desempenho com lista de estudantes */}
               {alertData.criticalCount > 0 && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                   <div className="flex items-center mb-2">
@@ -227,9 +280,26 @@ export function AlertsModal({ isOpen, onClose, classId }: AlertsModalProps) {
                   <div className="text-2xl font-bold text-red-600 mb-1">
                     {alertData.criticalCount}
                   </div>
-                  <p className="text-sm text-red-600">
+                  <p className="text-sm text-red-600 mb-3">
                     {alertData.criticalCount === 1 ? 'aluno precisa' : 'alunos precisam'} de atenção urgente
                   </p>
+                  {alertData.criticalStudents.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {alertData.criticalStudents.slice(0, 4).map((student, idx) => (
+                        <span
+                          key={idx}
+                          className="text-xs px-2 py-1 rounded-full bg-white text-red-700 border border-red-300 font-medium"
+                        >
+                          {student.name}
+                        </span>
+                      ))}
+                      {alertData.criticalStudents.length > 4 && (
+                        <span className="text-xs px-2 py-1 rounded-full bg-white text-red-700 border border-red-300 font-medium">
+                          +{alertData.criticalStudents.length - 4} mais
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -242,25 +312,26 @@ export function AlertsModal({ isOpen, onClose, classId }: AlertsModalProps) {
                   <div className="text-2xl font-bold text-yellow-600 mb-1">
                     {alertData.lowPerformanceCount}
                   </div>
-                  <p className="text-sm text-yellow-600">
+                  <p className="text-sm text-yellow-600 mb-3">
                     {alertData.lowPerformanceCount === 1 ? 'aluno está' : 'alunos estão'} abaixo da média
                   </p>
-                </div>
-              )}
-
-              {alertData.bestPerformer && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="flex items-center mb-2">
-                    <Trophy className="w-5 h-5 text-green-500 mr-2" />
-                    <h3 className="font-semibold text-green-800">Melhor Desempenho Geral</h3>
-                  </div>
-                  <p className="text-green-700 mb-2">
-                    <span className="font-semibold">{alertData.bestPerformer}</span> é o destaque geral da turma
-                  </p>
-                  <p className="text-sm text-green-600">
-                    Lucro: R$ {alertData.bestPerformerProfit.toLocaleString('pt-BR')} | 
-                    Satisfação: {alertData.bestPerformerSatisfaction}%
-                  </p>
+                  {alertData.lowPerformanceStudents.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {alertData.lowPerformanceStudents.slice(0, 4).map((student, idx) => (
+                        <span
+                          key={idx}
+                          className="text-xs px-2 py-1 rounded-full bg-white text-yellow-700 border border-yellow-300 font-medium"
+                        >
+                          {student.name}
+                        </span>
+                      ))}
+                      {alertData.lowPerformanceStudents.length > 4 && (
+                        <span className="text-xs px-2 py-1 rounded-full bg-white text-yellow-700 border border-yellow-300 font-medium">
+                          +{alertData.lowPerformanceStudents.length - 4} mais
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -287,18 +358,35 @@ export function AlertsModal({ isOpen, onClose, classId }: AlertsModalProps) {
                   <div className="text-2xl font-bold text-gray-600 mb-1">
                     {alertData.inactiveCount}
                   </div>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-600 mb-3">
                     {alertData.inactiveCount === 1 ? 'aluno ainda não enviou' : 'alunos ainda não enviaram'} resultados
                   </p>
+                  {alertData.inactiveStudents.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {alertData.inactiveStudents.slice(0, 4).map((student, idx) => (
+                        <span
+                          key={idx}
+                          className="text-xs px-2 py-1 rounded-full bg-white text-gray-700 border border-gray-300 font-medium"
+                        >
+                          {student.name}
+                        </span>
+                      ))}
+                      {alertData.inactiveStudents.length > 4 && (
+                        <span className="text-xs px-2 py-1 rounded-full bg-white text-gray-700 border border-gray-300 font-medium">
+                          +{alertData.inactiveStudents.length - 4} mais
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
-              {totalAlerts === 0 && alertData.inactiveCount === 0 && !isLoading && (
+              {totalItems === 0 && !isLoading && (
                 <div className="text-center py-8">
                   <Trophy className="w-12 h-12 text-green-500 mx-auto mb-4" />
                   <p className="text-green-600 font-semibold">Tudo certo!</p>
                   <p className="text-gray-500 text-sm mt-2">
-                    Não há alertas de desempenho no momento.
+                    Não há notificações no momento.
                   </p>
                 </div>
               )}

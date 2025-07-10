@@ -11,6 +11,8 @@ interface Student {
   joined_at: string | null
   total_matches: number
   avg_score: number
+  color: number
+  team_id: string | null
 }
 
 interface MatchResult {
@@ -136,7 +138,7 @@ export function ClassStudentsList({ students, matchResults = [], itemsPerPage = 
             <tr className="border-b border-gray-200">
               <th className="text-left py-3 px-4 font-medium text-gray-700">Aluno</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700">E-mail</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-700">Partidas</th>
+              <th className="text-left py-3 px-4 font-medium text-gray-700">Partidas Jogadas</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700">Lucro Total</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700">Satisfação Total</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700">Bônus Total</th>
@@ -150,16 +152,13 @@ export function ClassStudentsList({ students, matchResults = [], itemsPerPage = 
                 <td className="py-3 px-4">
                   <div>
                     <p className="font-medium text-gray-800">{student.name}</p>
-                    {student.matchesPlayed > 0 && (
-                      <p className="text-xs text-gray-500">{student.matchesPlayed} resultados registrados</p>
-                    )}
                   </div>
                 </td>
                 <td className="py-3 px-4 text-gray-600">{student.email}</td>
                 <td className="py-3 px-4 text-gray-600">
                   <div className="flex items-center gap-1">
                     <Trophy className="w-4 h-4 text-gray-400" />
-                    {student.total_matches}
+                    {student.matchesPlayed}
                   </div>
                 </td>
                 <td className="py-3 px-4">
