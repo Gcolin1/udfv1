@@ -138,10 +138,10 @@ export function ClassStudentsList({ students, matchResults = [], itemsPerPage = 
             <tr className="border-b border-gray-200">
               <th className="text-left py-3 px-4 font-medium text-gray-700">Aluno</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700">E-mail</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-700">Partidas Jogadas</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-700">Lucro Total</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-700">Satisfação Total</th>
-              <th className="text-left py-3 px-4 font-medium text-gray-700">Bônus Total</th>
+              <th className="text-left py-3 px-4 font-medium text-gray-700">Partidas</th>
+              <th className="text-left py-3 px-4 font-medium text-gray-700">Lucro</th>
+              <th className="text-left py-3 px-4 font-medium text-gray-700">Satisfação</th>
+              <th className="text-left py-3 px-4 font-medium text-gray-700">Bônus</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700">Engajamento</th>
               <th className="text-left py-3 px-4 font-medium text-gray-700">Ingressou em</th>
             </tr>

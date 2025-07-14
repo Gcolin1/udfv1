@@ -14,7 +14,9 @@ import {
   Filter,
   Search,
   Crown,
-  Medal
+  Medal,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -147,6 +149,8 @@ export function DetailedReport({ classData, students, matchResults, teams }: Det
   const [sortBy, setSortBy] = useState<'name' | 'lucro' | 'satisfacao' | 'bonus' | 'overall'>('overall')
   const [showMatchHistory] = useState<string | null>(null)
   const [selectedSection, setSelectedSection] = useState<'summary' | 'students' | 'teams' | 'performance'>('summary')
+  const [performanceCurrentPage, setPerformanceCurrentPage] = useState(1)
+  const performanceItemsPerPage = 10
 
   const getPurposeLabel = (purpose: 'lucro' | 'satisfacao' | 'bonus' | null) => {
     switch (purpose) {
@@ -330,6 +334,14 @@ export function DetailedReport({ classData, students, matchResults, teams }: Det
     }
   }, [processedStudents, matchResults, students, teams, classData.event?.expected_matches])
 
+  const paginatedPerformanceStudents = useMemo(() => {
+    const startIndex = (performanceCurrentPage - 1) * performanceItemsPerPage
+    const endIndex = startIndex + performanceItemsPerPage
+    return processedStudents.slice(startIndex, endIndex)
+  }, [processedStudents, performanceCurrentPage, performanceItemsPerPage])
+
+  const totalPerformancePages = Math.ceil(processedStudents.length / performanceItemsPerPage)
+
   const exportReport = () => {
     const summarySection = `Relatório Detalhado da Turma: ${classData.code}
 Descrição: ${classData.description || 'N/A'}
@@ -342,9 +354,9 @@ Estatísticas Gerais da Turma:
 Total de Alunos: ${classStats.uniquePlayers}
 Total de Times: ${classStats.totalTeams}
 Total de Partidas Jogadas: ${classStats.totalMatchesPlayed}
-Média de Lucro por Aluno: ${formatCurrency(classStats.avgLucro)}
-Média de Satisfação por Aluno: ${classStats.avgSatisfacao}%
-Média de Bônus por Aluno: ${formatCurrency(classStats.avgBonus)}
+Lucro Total da Turma: ${formatCurrency(classStats.totalLucro)}
+Satisfação Média da Turma: ${classStats.avgSatisfacao}%
+Bônus Total da Turma: ${formatCurrency(classStats.totalBonus)}
 Engajamento da Turma: ${classStats.classEngagement}%
 `;
 
@@ -497,8 +509,8 @@ Engajamento da Turma: ${classStats.classEngagement}%
             </div>
             <div className="bg-gray-50 p-4 rounded-lg text-center">
               <TrendingUp className="w-6 h-6 text-blue-600 mx-auto mb-2" />
-              <p className="text-xl lg:text-2xl font-bold text-gray-800 break-words">{formatCurrency(classStats.avgLucro)}</p>
-              <p className="text-sm text-gray-600">Lucro Médio</p>
+              <p className="text-xl lg:text-2xl font-bold text-gray-800 break-words">{formatCurrency(classStats.totalLucro)}</p>
+              <p className="text-sm text-gray-600">Lucro Total</p>
             </div>
             <div className="bg-gray-50 p-4 rounded-lg text-center">
               <Target className="w-6 h-6 text-green-600 mx-auto mb-2" />
@@ -507,8 +519,8 @@ Engajamento da Turma: ${classStats.classEngagement}%
             </div>
             <div className="bg-gray-50 p-4 rounded-lg text-center">
               <Award className="w-6 h-6 text-yellow-600 mx-auto mb-2" />
-              <p className="text-xl lg:text-2xl font-bold text-gray-800 break-words">{formatCurrency(classStats.avgBonus)}</p>
-              <p className="text-sm text-gray-600">Bônus Médio</p>
+              <p className="text-xl lg:text-2xl font-bold text-gray-800 break-words">{formatCurrency(classStats.totalBonus)}</p>
+              <p className="text-sm text-gray-600">Bônus Total</p>
             </div>
           </div>
         </div>
@@ -659,51 +671,85 @@ Engajamento da Turma: ${classStats.classEngagement}%
 
       {selectedSection === 'performance' && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2 mb-4">
+          <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2 mb-2">
             <BarChart3 className="w-4 h-4" /> Análise de Performance
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="font-semibold text-gray-800 mb-3">Top 5 Alunos (Geral)</h4>
-              <ul className="space-y-2">
-                {processedStudents.sort((a, b) => a.overallPosition - b.overallPosition).slice(0, 5).map(s => (
-                  <li key={s.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      {getRankIcon(s.overallPosition)}
-                      <span className="font-medium text-gray-800">{s.name}</span>
-                    </div>
-                    <span className="text-sm text-gray-600">{s.totalScore} pts</span>
-                  </li>
-                ))}
-              </ul>
+          <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-sm text-blue-800">
+              <strong>Score por Partida:</strong> Calculado como <strong>Lucro + Satisfação + Bônus</strong> obtidos em cada partida individual.
+              Este indicador mostra o desempenho combinado do aluno considerando todos os aspectos avaliados no jogo.
+            </p>
+          </div>
+          <div className="mb-8">
+            <h4 className="font-semibold text-gray-800 mb-3">Top 5 Alunos (Geral)</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {processedStudents.sort((a, b) => a.overallPosition - b.overallPosition).slice(0, 5).map(s => (
+                <div key={s.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex items-center gap-2">
+                    {getRankIcon(s.overallPosition)}
+                    <span className="font-medium text-gray-800">{s.name}</span>
+                  </div>
+                  <span className="text-sm text-gray-600">{s.totalScore} pts (total acumulado)</span>
+                </div>
+              ))}
             </div>
-            <div>
-              <h4 className="font-semibold text-gray-800 mb-3">Métricas de Performance por Aluno</h4>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aluno</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Partidas</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Melhor Score</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pior Score</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Média Score</th>
+          </div>
+
+          <div>
+            <h4 className="font-semibold text-gray-800 mb-3">Métricas de Performance por Aluno</h4>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aluno</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Partidas</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Melhor Score (Lucro+Satisfação+Bônus)</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pior Score (Lucro+Satisfação+Bônus)</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score Médio por Partida</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {paginatedPerformanceStudents.map(s => (
+                    <tr key={s.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{s.name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{s.performance.totalMatchesPlayed}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{s.performance.bestMatchScore}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{s.performance.worstMatchScore}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{s.performance.avgMatchScore}</td>
                     </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {processedStudents.map(s => (
-                      <tr key={s.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{s.name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{s.performance.totalMatchesPlayed}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{s.performance.bestMatchScore}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{s.performance.worstMatchScore}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{s.performance.avgMatchScore}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
+            
+            {totalPerformancePages > 1 && (
+              <div className="flex items-center justify-between mt-4">
+                <div className="text-sm text-gray-700">
+                  Mostrando {((performanceCurrentPage - 1) * performanceItemsPerPage) + 1} até {Math.min(performanceCurrentPage * performanceItemsPerPage, processedStudents.length)} de {processedStudents.length} alunos
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPerformanceCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={performanceCurrentPage === 1}
+                    className="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Anterior
+                  </button>
+                  <span className="text-sm text-gray-700">
+                    Página {performanceCurrentPage} de {totalPerformancePages}
+                  </span>
+                  <button
+                    onClick={() => setPerformanceCurrentPage(prev => Math.min(totalPerformancePages, prev + 1))}
+                    disabled={performanceCurrentPage === totalPerformancePages}
+                    className="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                  >
+                    Próxima
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

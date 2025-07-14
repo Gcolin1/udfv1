@@ -78,13 +78,10 @@ export function DashboardPage() {
 
         studentsCount = count || 0
 
-        const today = new Date().toISOString().split('T')[0]
-
         const { count: matches } = await supabase
           .from('matches')
           .select('*', { count: 'exact', head: true })
           .in('class_id', ids)
-          .eq('match_date', today)
 
         matchesCount = matches || 0
       }
@@ -149,7 +146,7 @@ export function DashboardPage() {
             <StatCard icon={Users} value={stats.classes} label="Turmas Ativas" color="bg-blue-500" />
             <StatCard icon={Calendar} value={stats.events} label="Eventos Criados" color="bg-green-500" />
             <StatCard icon={BookOpen} value={stats.students} label="Alunos Total" color="bg-purple-500" />
-            <StatCard icon={Activity} value={stats.matches} label="Partidas Hoje" color="bg-orange-500" />
+            <StatCard icon={Activity} value={stats.matches} label="Partidas Totais" color="bg-orange-500" />
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">

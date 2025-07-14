@@ -1,6 +1,6 @@
 // src/pages/ClassDetailsPage.tsx
 import { useState, useEffect, useMemo } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Crown, Medal, Trophy, Users as UsersIcon } from 'lucide-react'
 import { format, startOfMonth, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -111,7 +111,7 @@ interface StudentIndicator {
   totalBonus: number
   purpose: 'lucro' | 'satisfacao' | 'bonus' | null
   groupPurpose: 'lucro' | 'satisfacao' | 'bonus' | null
-  statusColor: 'green' | 'yellow' | 'red'
+  statusColor: 'green' | 'yellow' | 'red' | 'gray'
   lucroPosition: number
   satisfacaoPosition: number
   bonusPosition: number
@@ -124,6 +124,7 @@ interface StudentIndicator {
 export function ClassDetailsPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { user } = useAuth()
   const [classData, setClassData] = useState<Class | null>(null)
   const [students, setStudents] = useState<Student[]>([])
@@ -146,6 +147,14 @@ export function ClassDetailsPage() {
       loadClassData()
     }
   }, [user, id])
+
+  useEffect(() => {
+    // Verificar se há parâmetros na URL para navegação
+    const tab = searchParams.get('tab')
+    if (tab && ['overview', 'ranking', 'indicators', 'growth', 'detailed-report'].includes(tab)) {
+      setActiveTab(tab as 'overview' | 'ranking' | 'indicators' | 'growth' | 'detailed-report')
+    }
+  }, [searchParams])
 
   useEffect(() => {
     if (students.length > 0 && matchResults.length > 0) {
@@ -330,173 +339,194 @@ export function ClassDetailsPage() {
   }
 
   const calculateRankingData = () => {
-    if (students.length === 0 || matchResults.length === 0) return
+    if (students.length === 0) return
 
-    const hasTeams = teams.length > 0 && teams.some(team => team.members.length > 0)
+    // Calcular estatísticas de todos os estudantes (sempre aparecerão como jogadores individuais)
+    const studentStats = students.map(student => {
+      const studentResults = matchResults.filter(result => result.player_id === student.id)
 
-    if (hasTeams) {
-      const teamStats = teams
-        .filter(team => team.members.length > 0)
-        .map(team => {
-          const teamResults = matchResults.filter(result =>
-            team.members.some(member => member.id === result.player_id)
-          )
+      const totalLucro = studentResults.reduce((sum, result) => sum + (result.lucro || 0), 0)
 
-          const totalLucro = teamResults.reduce((sum, result) => sum + (result.lucro || 0), 0)
+      const satisfacaoResults = studentResults.filter(result => result.satisfacao !== null)
+      const totalSatisfacao = satisfacaoResults.reduce((sum, result) => sum + (result.satisfacao || 0), 0)
+      const avgSatisfacao = satisfacaoResults.length > 0 ? totalSatisfacao / satisfacaoResults.length : 0
 
-          const satisfacaoResults = matchResults.filter(result =>
-            team.members.some(member => member.id === result.player_id) && result.satisfacao !== null
-          );
-          const totalSatisfacao = satisfacaoResults.reduce((sum, result) => sum + (result.satisfacao || 0), 0)
-          const avgSatisfacao = satisfacaoResults.length > 0 ? totalSatisfacao / satisfacaoResults.length : 0
+      const totalBonus = studentResults.reduce((sum, result) => sum + (result.bonus || 0), 0)
 
-          const totalBonus = teamResults.reduce((sum, result) => sum + (result.bonus || 0), 0)
+      return {
+        id: student.id,
+        name: student.name || 'Sem nome',
+        totalLucro,
+        avgSatisfacao,
+        totalBonus,
+        matches: studentResults.length,
+        isTeam: false,
+        purpose: student.purpose
+      }
+    })
 
-          return {
-            id: team.id,
-            name: team.name || 'Time sem nome',
-            totalLucro,
-            avgSatisfacao,
-            totalBonus,
-            matches: team.members.reduce((sum, member) => sum + matchResults.filter(r => r.player_id === member.id).length, 0),
-            isTeam: true
-          }
-        })
+    // Calcular estatísticas dos times (se existirem)
+    const teamStats = teams
+      .filter(team => team.members.length > 0)
+      .map(team => {
+        const teamResults = matchResults.filter(result =>
+          team.members.some(member => member.id === result.player_id)
+        )
 
-      const individualStats = students
-        .filter(student => !student.team_id)
-        .map(student => {
-          const studentResults = matchResults.filter(result => result.player_id === student.id)
+        const totalLucro = teamResults.reduce((sum, result) => sum + (result.lucro || 0), 0)
 
-          const totalLucro = studentResults.reduce((sum, result) => sum + (result.lucro || 0), 0)
-
-          const satisfacaoResults = studentResults.filter(result => result.satisfacao !== null)
-          const totalSatisfacao = satisfacaoResults.reduce((sum, result) => sum + (result.satisfacao || 0), 0)
-          const avgSatisfacao = satisfacaoResults.length > 0 ? totalSatisfacao / satisfacaoResults.length : 0
-
-          const totalBonus = studentResults.reduce((sum, result) => sum + (result.bonus || 0), 0)
-
-          return {
-            id: student.id,
-            name: student.name || 'Sem nome',
-            totalLucro,
-            avgSatisfacao,
-            totalBonus,
-            matches: studentResults.length,
-            isTeam: false
-          }
-        })
-
-      const allEntities = [...teamStats, ...individualStats]
-
-      const lucroRanking = [...allEntities].sort((a, b) => b.totalLucro - a.totalLucro)
-      const satisfacaoRanking = [...allEntities].sort((a, b) => b.avgSatisfacao - a.avgSatisfacao)
-      const bonusRanking = [...allEntities].sort((a, b) => b.totalBonus - a.totalBonus)
-
-      const finalRanking = allEntities.map(entity => {
-        const lucroPos = lucroRanking.findIndex(e => e.id === entity.id) + 1
-        const satisfacaoPos = satisfacaoRanking.findIndex(e => e.id === entity.id) + 1
-        const bonusPos = bonusRanking.findIndex(e => e.id === entity.id) + 1
-
-        const totalPosition = lucroPos + satisfacaoPos + bonusPos
-
-        return {
-          ...entity,
-          lucroPosition: lucroPos,
-          satisfacaoPosition: satisfacaoPos,
-          bonusPosition: bonusPos,
-          totalPosition,
-          score: totalPosition
-        }
-      })
-
-      finalRanking.sort((a, b) => {
-        if (a.totalPosition !== b.totalPosition) {
-          return a.totalPosition - b.totalPosition
-        }
-        if (a.totalLucro !== b.totalLucro) {
-          return b.totalLucro - a.totalLucro
-        }
-        if (a.avgSatisfacao !== b.avgSatisfacao) {
-          return b.avgSatisfacao - a.avgSatisfacao
-        }
-        return b.totalBonus - a.totalBonus
-      })
-
-      const rankingWithPosition = finalRanking.map((entity, index) => ({
-        name: entity.name,
-        score: entity.totalPosition,
-        position: index + 1,
-        matches: entity.matches,
-        isTeam: entity.isTeam
-      }))
-
-      setRankingData(rankingWithPosition)
-    } else {
-      const studentStats = students.map(student => {
-        const studentResults = matchResults.filter(result => result.player_id === student.id)
-
-        const totalLucro = studentResults.reduce((sum, result) => sum + (result.lucro || 0), 0)
-
-        const satisfacaoResults = studentResults.filter(result => result.satisfacao !== null)
+        const satisfacaoResults = matchResults.filter(result =>
+          team.members.some(member => member.id === result.player_id) && result.satisfacao !== null
+        );
         const totalSatisfacao = satisfacaoResults.reduce((sum, result) => sum + (result.satisfacao || 0), 0)
         const avgSatisfacao = satisfacaoResults.length > 0 ? totalSatisfacao / satisfacaoResults.length : 0
 
-        const totalBonus = studentResults.reduce((sum, result) => sum + (result.bonus || 0), 0)
+        const totalBonus = teamResults.reduce((sum, result) => sum + (result.bonus || 0), 0)
 
         return {
-          id: student.id,
-          name: student.name || 'Sem nome',
+          id: team.id,
+          name: team.name || 'Time sem nome',
           totalLucro,
           avgSatisfacao,
           totalBonus,
-          matches: studentResults.length
+          matches: team.members.reduce((sum, member) => sum + matchResults.filter(r => r.player_id === member.id).length, 0),
+          isTeam: true,
+          purpose: team.group_purpose
         }
       })
 
-      const lucroRanking = [...studentStats].sort((a, b) => b.totalLucro - a.totalLucro)
-      const satisfacaoRanking = [...studentStats].sort((a, b) => b.avgSatisfacao - a.avgSatisfacao)
-      const bonusRanking = [...studentStats].sort((a, b) => b.totalBonus - a.totalBonus)
+    // Filtrar apenas jogadores/times com partidas para o ranking
+    const activeStudents = studentStats.filter(student => student.matches > 0)
+    const activeTeams = teamStats.filter(team => team.matches > 0)
+    
+    // Combinar estudantes e times ativos para o ranking
+    const allEntities = [...activeStudents, ...activeTeams]
 
-      const finalRanking = studentStats.map(student => {
-        const lucroPos = lucroRanking.findIndex(s => s.id === student.id) + 1
-        const satisfacaoPos = satisfacaoRanking.findIndex(s => s.id === student.id) + 1
-        const bonusPos = bonusRanking.findIndex(s => s.id === student.id) + 1
+    const lucroRanking = [...allEntities].sort((a, b) => b.totalLucro - a.totalLucro)
+    const satisfacaoRanking = [...allEntities].sort((a, b) => b.avgSatisfacao - a.avgSatisfacao)
+    const bonusRanking = [...allEntities].sort((a, b) => b.totalBonus - a.totalBonus)
 
-        const totalPosition = lucroPos + satisfacaoPos + bonusPos
+    const finalRanking = allEntities.map(entity => {
+      const lucroPos = lucroRanking.findIndex(e => e.id === entity.id) + 1
+      const satisfacaoPos = satisfacaoRanking.findIndex(e => e.id === entity.id) + 1
+      const bonusPos = bonusRanking.findIndex(e => e.id === entity.id) + 1
 
-        return {
-          ...student,
-          lucroPosition: lucroPos,
-          satisfacaoPosition: satisfacaoPos,
-          bonusPosition: bonusPos,
-          totalPosition,
-          score: totalPosition
-        }
-      })
+      const totalPosition = lucroPos + satisfacaoPos + bonusPos
 
-      finalRanking.sort((a, b) => {
-        if (a.totalPosition !== b.totalPosition) {
-          return a.totalPosition - b.totalPosition
-        }
-        if (a.totalLucro !== b.totalLucro) {
-          return b.totalLucro - a.totalLucro
-        }
-        if (a.avgSatisfacao !== b.avgSatisfacao) {
-          return b.avgSatisfacao - a.avgSatisfacao
-        }
-        return b.totalBonus - a.totalBonus
-      })
+      return {
+        ...entity,
+        lucroPosition: lucroPos,
+        satisfacaoPosition: satisfacaoPos,
+        bonusPosition: bonusPos,
+        totalPosition,
+        score: totalPosition
+      }
+    })
 
-      const rankingWithPosition = finalRanking.map((student, index) => ({
-        name: student.name,
-        score: student.totalPosition,
-        position: index + 1,
-        matches: student.matches,
-        isTeam: false
-      }))
+    finalRanking.sort((a, b) => {
+      if (a.totalPosition !== b.totalPosition) {
+        return a.totalPosition - b.totalPosition
+      }
+      if (a.totalLucro !== b.totalLucro) {
+        return b.totalLucro - a.totalLucro
+      }
+      if (a.avgSatisfacao !== b.avgSatisfacao) {
+        return b.avgSatisfacao - a.avgSatisfacao
+      }
+      return b.totalBonus - a.totalBonus
+    })
 
-      setRankingData(rankingWithPosition)
+    // Calcular médias da turma para comparação relativa (mesmo cálculo dos indicadores)
+    const participatingEntities = finalRanking.filter(e => e.matches > 0)
+    const classAverages = {
+      lucro: participatingEntities.length > 0 ? participatingEntities.reduce((sum, e) => sum + e.totalLucro, 0) / participatingEntities.length : 0,
+      satisfacao: participatingEntities.length > 0 ? participatingEntities.reduce((sum, e) => sum + e.avgSatisfacao, 0) / participatingEntities.length : 0,
+      bonus: participatingEntities.length > 0 ? participatingEntities.reduce((sum, e) => sum + e.totalBonus, 0) / participatingEntities.length : 0,
+    }
+
+    const rankingWithPosition = finalRanking.map((entity, index) => {
+      const position = index + 1
+      
+      // Calcular engajamento individual baseado no número de partidas únicas
+      const totalUniqueMatches = [...new Set(matchResults.map(r => r.match_number))].length
+      const individualEngagement = totalUniqueMatches > 0 
+        ? Math.min(100, Math.round((entity.matches / totalUniqueMatches) * 100))
+        : 0
+      
+      // Usar a mesma lógica complexa dos indicadores
+      const statusColor = calculateStatusColor(
+        entity.purpose,
+        entity.isTeam ? entity.purpose : null, // Para times, usar o purpose como groupPurpose
+        entity.totalLucro,
+        entity.avgSatisfacao,
+        entity.totalBonus,
+        individualEngagement,
+        entity.matches > 0,
+        classAverages
+      )
+      
+      return {
+        name: entity.name,
+        score: entity.totalPosition,
+        position,
+        matches: entity.matches,
+        isTeam: entity.isTeam,
+        purpose: entity.purpose,
+        statusColor
+      }
+    })
+
+    setRankingData(rankingWithPosition)
+  }
+
+  const calculateStatusColor = (
+    purpose: 'lucro' | 'satisfacao' | 'bonus' | null,
+    groupPurpose: 'lucro' | 'satisfacao' | 'bonus' | null,
+    totalLucro: number,
+    avgSatisfacao: number,
+    totalBonus: number,
+    individualEngagement: number,
+    hasParticipated: boolean,
+    classAverages: { lucro: number; satisfacao: number; bonus: number }
+  ): 'green' | 'yellow' | 'red' | 'gray' => {
+    const effectivePurpose = purpose || groupPurpose
+
+    // Se não participou, status cinza
+    if (!hasParticipated) {
+      return 'gray'
+    }
+
+    // Calcular performance relativa (comparado com média da turma)
+    let performancePercentage = 0
+    if (effectivePurpose && classAverages[effectivePurpose] > 0) {
+      let currentValue = 0
+      switch (effectivePurpose) {
+        case 'lucro':
+          currentValue = totalLucro
+          break
+        case 'satisfacao':
+          currentValue = avgSatisfacao
+          break
+        case 'bonus':
+          currentValue = totalBonus
+          break
+      }
+      performancePercentage = (currentValue / classAverages[effectivePurpose]) * 100
+    }
+
+    // Combinar performance + engajamento
+    const engagementWeight = 0.3 // 30% peso para engajamento
+    const performanceWeight = 0.7 // 70% peso para performance
+    
+    const combinedScore = (performancePercentage * performanceWeight) + (individualEngagement * engagementWeight)
+
+    // Definir status baseado no score combinado
+    if (combinedScore >= 80) {
+      return 'green'
+    } else if (combinedScore >= 50) {
+      return 'yellow'
+    } else {
+      return 'red'
     }
   }
 
@@ -534,7 +564,7 @@ export function ClassDetailsPage() {
         totalBonus,
         purpose: student.purpose,
         groupPurpose: studentTeam?.group_purpose || null,
-        statusColor: 'red' as 'green' | 'yellow' | 'red',
+        statusColor: 'red' as 'green' | 'yellow' | 'red' | 'gray',
         lucroPosition: 0,
         satisfacaoPosition: 0,
         bonusPosition: 0,
@@ -555,46 +585,16 @@ export function ClassDetailsPage() {
 
     // Calcular statusColor baseado em performance + engajamento
     indicators.forEach(indicator => {
-      const purpose = indicator.purpose || indicator.groupPurpose
-
-      // Se o aluno não participou, status vermelho
-      if (!indicator.hasParticipated) {
-        indicator.statusColor = 'red'
-        return
-      }
-
-      // Calcular performance relativa (comparado com média da turma)
-      let performancePercentage = 0
-      if (purpose && classAverages[purpose] > 0) {
-        let currentValue = 0
-        switch (purpose) {
-          case 'lucro':
-            currentValue = indicator.totalLucro
-            break
-          case 'satisfacao':
-            currentValue = indicator.avgSatisfacao
-            break
-          case 'bonus':
-            currentValue = indicator.totalBonus
-            break
-        }
-        performancePercentage = (currentValue / classAverages[purpose]) * 100
-      }
-
-      // Combinar performance + engajamento
-      const engagementWeight = 0.3 // 30% peso para engajamento
-      const performanceWeight = 0.7 // 70% peso para performance
-      
-      const combinedScore = (performancePercentage * performanceWeight) + (indicator.individualEngagement * engagementWeight)
-
-      // Definir status baseado no score combinado
-      if (combinedScore >= 80) {
-        indicator.statusColor = 'green'
-      } else if (combinedScore >= 50) {
-        indicator.statusColor = 'yellow'
-      } else {
-        indicator.statusColor = 'red'
-      }
+      indicator.statusColor = calculateStatusColor(
+        indicator.purpose,
+        indicator.groupPurpose,
+        indicator.totalLucro,
+        indicator.avgSatisfacao,
+        indicator.totalBonus,
+        indicator.individualEngagement,
+        indicator.hasParticipated,
+        classAverages
+      )
     })
 
     const lucroSorted = [...indicators].sort((a, b) => b.totalLucro - a.totalLucro)
@@ -887,6 +887,7 @@ const stats = useMemo(() => {
                 <ClassRankingChart
                   rankingData={rankingData}
                   getRankIcon={getRankIcon}
+                  classId={id!}
                 />
               ) : (
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
@@ -900,6 +901,7 @@ const stats = useMemo(() => {
             <ClassIndicators
               studentIndicators={studentIndicators}
               isLoading={isLoading}
+              initialSearchTerm={searchParams.get('search') || ''}
             />
           )}
 

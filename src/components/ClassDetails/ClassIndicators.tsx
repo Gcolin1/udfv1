@@ -1,5 +1,5 @@
 // src/components/ClassDetails/ClassIndicators.tsx
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Users, TrendingUp, Trophy, Target, User, Search, Award } from 'lucide-react'
 
 interface StudentIndicator {
@@ -11,7 +11,7 @@ interface StudentIndicator {
   totalBonus: number
   purpose: 'lucro' | 'satisfacao' | 'bonus' | null
   groupPurpose: 'lucro' | 'satisfacao' | 'bonus' | null
-  statusColor: 'green' | 'yellow' | 'red'
+  statusColor: 'green' | 'yellow' | 'red' | 'gray'
   lucroPosition: number
   satisfacaoPosition: number
   bonusPosition: number
@@ -23,13 +23,20 @@ interface StudentIndicator {
 interface ClassIndicatorsProps {
   studentIndicators: StudentIndicator[]
   isLoading: boolean
+  initialSearchTerm?: string
 }
 
-export function ClassIndicators({ studentIndicators, isLoading }: ClassIndicatorsProps) {
-  const [searchTerm, setSearchTerm] = useState('')
+export function ClassIndicators({ studentIndicators, isLoading, initialSearchTerm = '' }: ClassIndicatorsProps) {
+  const [searchTerm, setSearchTerm] = useState(initialSearchTerm)
   const [purposeFilter, setPurposeFilter] = useState<'lucro' | 'satisfacao' | 'bonus' | 'todos'>('todos')
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(10)
+
+  useEffect(() => {
+    if (initialSearchTerm) {
+      setSearchTerm(initialSearchTerm)
+    }
+  }, [initialSearchTerm])
 
   // Função para formatar valores monetários em Real brasileiro
   const formatCurrency = (value: number): string => {
@@ -181,7 +188,7 @@ export function ClassIndicators({ studentIndicators, isLoading }: ClassIndicator
         return formatCurrency(student.totalBonus)
       case 'todos':
       default:
-        return `Pontuação Geral: ${student.totalPosition}`
+        return null // Não mostrar pontuação para "todos"
     }
   }
 
@@ -231,36 +238,27 @@ export function ClassIndicators({ studentIndicators, isLoading }: ClassIndicator
     }
   }
 
-  const getStatusColor = (color: 'green' | 'yellow' | 'red') => {
+  const getStatusColor = (color: 'green' | 'yellow' | 'red' | 'gray') => {
     switch (color) {
       case 'green': return 'bg-green-500'
       case 'yellow': return 'bg-yellow-500'
       case 'red': return 'bg-red-500'
+      case 'gray': return 'bg-gray-400'
       default: return 'bg-gray-500'
     }
   }
 
-  const getStatusLabel = (color: 'green' | 'yellow' | 'red', hasParticipated: boolean = true) => {
+  const getStatusLabel = (color: 'green' | 'yellow' | 'red' | 'gray') => {
     switch (color) {
       case 'green': return 'Excelente (performance + engajamento)'
       case 'yellow': return 'Bom (performance ou engajamento mediano)'
-      case 'red': return hasParticipated ? 'Precisa melhorar' : 'Não participou'
+      case 'red': return 'Precisa melhorar'
+      case 'gray': return 'Não jogou'
       default: return 'Indefinido'
     }
   }
 
-  const getCurrentRankingPosition = (index: number) => {
-    return index + 1
-  }
 
-  const getRankingPositionColor = (position: number) => {
-    switch (position) {
-      case 1: return 'bg-yellow-500 text-white' // Ouro
-      case 2: return 'bg-gray-400 text-white'   // Prata
-      case 3: return 'bg-orange-600 text-white' // Bronze
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
   
   if (isLoading) {
     return (
@@ -341,23 +339,29 @@ export function ClassIndicators({ studentIndicators, isLoading }: ClassIndicator
         {/* --- LEGENDA DOS INDICADORES DE STATUS --- */}
         <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
           <h3 className="text-sm font-medium text-gray-700 mb-2">📊 Legenda dos Indicadores de Status:</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-green-500 rounded-full flex-shrink-0"></div>
               <span className="text-gray-700">
-                <strong>Verde:</strong> Excelente (≥80% performance + engajamento)
+                <strong>Verde:</strong> Excelente (≥80%)
               </span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-yellow-500 rounded-full flex-shrink-0"></div>
               <span className="text-gray-700">
-                <strong>Amarelo:</strong> Bom (50-79% performance + engajamento)
+                <strong>Amarelo:</strong> Bom (50-79%)
               </span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-red-500 rounded-full flex-shrink-0"></div>
               <span className="text-gray-700">
-                <strong>Vermelho:</strong> Precisa melhorar (&lt;50%) ou não participou
+                <strong>Vermelho:</strong> Precisa melhorar (&lt;50%)
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-gray-400 rounded-full flex-shrink-0"></div>
+              <span className="text-gray-700">
+                <strong>Cinza:</strong> Não jogou
               </span>
             </div>
           </div>
@@ -369,16 +373,11 @@ export function ClassIndicators({ studentIndicators, isLoading }: ClassIndicator
 
         {/* --- Renderização dos cards no formato de ranking --- */}
         <div className="space-y-3">
-          {paginatedIndicators.map((student, index) => {
-            const position = getCurrentRankingPosition(startIndex + index)
+          {paginatedIndicators.map((student) => {
             
             return (
               <div key={student.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-4">
-                  {/* Posição no ranking */}
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${getRankingPositionColor(position)}`}>
-                    {position}
-                  </div>
                   
                   {/* Informações do estudante */}
                   <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -397,18 +396,20 @@ export function ClassIndicators({ studentIndicators, isLoading }: ClassIndicator
                   </div>
                   
                   {/* Valor principal baseado no filtro */}
-                  <div className="text-right">
-                    <div className="flex items-center gap-2">
-                      {getPrimaryIcon()}
-                      <span className="text-lg font-bold text-gray-800">{getPrimaryValue(student)}</span>
+                  {getPrimaryValue(student) && (
+                    <div className="text-right">
+                      <div className="flex items-center gap-2">
+                        {getPrimaryIcon()}
+                        <span className="text-lg font-bold text-gray-800">{getPrimaryValue(student)}</span>
+                      </div>
                     </div>
-                  </div>
+                  )}
                   
                   {/* Indicador de status */}
                   <div className="relative group">
                     <div className={`w-3 h-3 rounded-full flex-shrink-0 cursor-help ${getStatusColor(student.statusColor)}`}></div>
                     <div className="absolute bottom-full right-0 mb-2 w-max max-w-xs px-3 py-1.5 text-sm font-medium text-white bg-gray-800 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
-                      {getStatusLabel(student.statusColor, student.hasParticipated)}
+                      {getStatusLabel(student.statusColor)}
                     </div>
                   </div>
                 </div>
@@ -423,7 +424,6 @@ export function ClassIndicators({ studentIndicators, isLoading }: ClassIndicator
                           <span className="text-xs text-gray-600">Lucro</span>
                         </div>
                         <span className="text-sm font-semibold text-gray-800">{formatCurrency(student.totalLucro)}</span>
-                        <span className="text-xs text-gray-500 block">#{student.lucroPosition}</span>
                       </div>
                       <div>
                         <div className="flex items-center justify-center gap-1 mb-1">
@@ -431,7 +431,6 @@ export function ClassIndicators({ studentIndicators, isLoading }: ClassIndicator
                           <span className="text-xs text-gray-600">Satisfação</span>
                         </div>
                         <span className="text-sm font-semibold text-gray-800">{student.avgSatisfacao}%</span>
-                        <span className="text-xs text-gray-500 block">#{student.satisfacaoPosition}</span>
                       </div>
                       <div>
                         <div className="flex items-center justify-center gap-1 mb-1">
@@ -439,7 +438,6 @@ export function ClassIndicators({ studentIndicators, isLoading }: ClassIndicator
                           <span className="text-xs text-gray-600">Bônus</span>
                         </div>
                         <span className="text-sm font-semibold text-gray-800">{formatCurrency(student.totalBonus)}</span>
-                        <span className="text-xs text-gray-500 block">#{student.bonusPosition}</span>
                       </div>
                     </div>
                   </div>

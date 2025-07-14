@@ -9,7 +9,7 @@ interface StudentIndicator {
   totalBonus: number
   purpose: 'lucro' | 'satisfacao' | 'bonus' | null
   groupPurpose: 'lucro' | 'satisfacao' | 'bonus' | null
-  statusColor: 'green' | 'yellow' | 'red'
+  statusColor: 'green' | 'yellow' | 'red' | 'gray'
   lucroPosition: number
   satisfacaoPosition: number
   bonusPosition: number
@@ -130,48 +130,6 @@ export function ClassOverview({ studentIndicators, stats }: ClassOverviewProps) 
           <p className="text-sm text-orange-600">Total Partidas</p>
         </div>
       </div>
-
-      {/* Estatísticas Adicionais */}
-      {stats.totalResults > 0 && (
-        <div className="border-t border-gray-200 pt-4">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Estatísticas Detalhadas</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            
-            <div className="text-center p-3 bg-gray-50 rounded-lg relative">
-              <div className="absolute top-2 right-2 group">
-                <Info className="w-4 h-4 text-gray-400 cursor-help" />
-                <span className="absolute bottom-full right-0 mb-2 w-max max-w-xs px-3 py-1.5 text-sm font-medium text-white bg-gray-800 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
-                  Soma de todos os registros de resultados individuais enviados pelos alunos.
-                </span>
-              </div>
-              <p className="text-lg font-bold text-gray-800 break-words">{formatNumber(stats.totalResults)}</p>
-              <p className="text-xs text-gray-600">Total Resultados</p>
-            </div>
-            
-            <div className="text-center p-3 bg-gray-50 rounded-lg relative">
-              <div className="absolute top-2 right-2 group">
-                <Info className="w-4 h-4 text-gray-400 cursor-help" />
-                <span className="absolute bottom-full right-0 mb-2 w-max max-w-xs px-3 py-1.5 text-sm font-medium text-white bg-gray-800 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
-                  Média de participações em partidas por cada aluno inscrito na turma.
-                </span>
-              </div>
-              <p className="text-lg font-bold text-gray-800 break-words">{formatNumber(stats.avgMatches)}</p>
-              <p className="text-xs text-gray-600">Partidas por Aluno</p>
-            </div>
-            
-            <div className="text-center p-3 bg-gray-50 rounded-lg relative">
-              <div className="absolute top-2 right-2 group">
-                <Info className="w-4 h-4 text-gray-400 cursor-help" />
-                <span className="absolute bottom-full right-0 mb-2 w-max max-w-xs px-3 py-1.5 text-sm font-medium text-white bg-gray-800 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity z-50">
-                  Soma das médias de Lucro, Satisfação e Bônus por resultado individual.
-                </span>
-              </div>
-              <p className="text-lg font-bold text-gray-800 break-words">{formatNumber(stats.avgTotal)}</p>
-              <p className="text-xs text-gray-600">Pontuação Total Média</p>
-            </div>
-          </div>
-        </div>
-      )}
       </div>
 
     </div>
