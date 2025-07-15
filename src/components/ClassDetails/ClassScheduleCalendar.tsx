@@ -66,33 +66,33 @@ export function ClassScheduleCalendar({
         <div className="flex items-center justify-between mb-4">
           <button
             onClick={goToPreviousMonth}
-            className="p-2 hover:bg-blue-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-blue-100 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
           >
             <ChevronLeft className="w-5 h-5 text-gray-600" />
           </button>
           
-          <h3 className="text-lg font-semibold text-gray-800">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800 truncate px-2" title={format(currentMonth, 'MMMM yyyy', { locale: ptBR })}>
             {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
           </h3>
           
           <button
             onClick={goToNextMonth}
-            className="p-2 hover:bg-blue-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-blue-100 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
           >
             <ChevronRight className="w-5 h-5 text-gray-600" />
           </button>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto pb-2">
           {/* Dias da Semana */}
-          <div className="grid grid-cols-7 text-center text-sm font-medium text-gray-600 mb-2 min-w-full">
+          <div className="grid grid-cols-7 text-center text-xs sm:text-sm font-medium text-gray-600 mb-2 min-w-[280px]">
             {weekdays.map(day => (
-              <div key={day} className="py-2">{day}</div>
+              <div key={day} className="py-2 px-1">{day}</div>
             ))}
           </div>
 
           {/* Dias do Mês */}
-          <div className="grid grid-cols-7 gap-2 min-w-full">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2 min-w-[280px]">
             {calendarDays.map((day, index) => {
               const isScheduled = day && scheduledDatesMap.has(format(day, 'yyyy-MM-dd'))
               const scheduledInfo = isScheduled ? scheduledDatesMap.get(format(day, 'yyyy-MM-dd')) : null
@@ -100,16 +100,17 @@ export function ClassScheduleCalendar({
               return (
                 <div
                   key={index}
-                  className={`relative flex items-center justify-center w-full aspect-square rounded-md transition-all duration-200 cursor-pointer
+                  className={`relative flex items-center justify-center w-full aspect-square rounded-md transition-all duration-200 cursor-pointer text-xs sm:text-sm min-h-[36px] sm:min-h-[44px]
                     ${day ? 'bg-white text-gray-800' : 'bg-gray-50 text-gray-400 cursor-not-allowed'}
                     ${isScheduled ? 'bg-blue-500 text-white font-semibold shadow-md hover:scale-105' : 'hover:bg-gray-100'}
                   `}
                   onMouseEnter={isScheduled && scheduledInfo ? (e) => handleMouseEnter(scheduledInfo, e) : undefined}
                   onMouseLeave={isScheduled ? handleMouseLeave : undefined}
+                  onClick={isScheduled && scheduledInfo ? (e) => handleMouseEnter(scheduledInfo, e) : undefined}
                 >
                   {day ? format(day, 'd') : ''}
                   {isScheduled && (
-                    <CalendarCheck className="absolute inset-0 w-full h-full text-cyan-700 p-1 pointer-events-none" />
+                    <CalendarCheck className="absolute inset-0 w-full h-full text-cyan-700 p-0.5 sm:p-1 pointer-events-none" />
                   )}
                 </div>
               )
@@ -119,8 +120,8 @@ export function ClassScheduleCalendar({
 
         {/* Resumo */}
         <div className="mt-4 p-3 bg-blue-100 rounded-lg">
-          <p className="text-sm text-blue-800 font-medium">
-            📅 Total de {totalScheduledEvents} encontro{totalScheduledEvents > 1 ? 's' : ''} programado{totalScheduledEvents > 1 ? 's' : ''}
+          <p className="text-xs sm:text-sm text-blue-800 font-medium text-center">
+            📅 {totalScheduledEvents} encontro{totalScheduledEvents > 1 ? 's' : ''} programado{totalScheduledEvents > 1 ? 's' : ''}
           </p>
         </div>
       </div>

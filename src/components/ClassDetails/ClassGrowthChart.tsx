@@ -325,10 +325,10 @@ export default function StudentGrowth({ students, matchResults, teams = [] }: St
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-          <p className="font-medium text-gray-800">{`Partida ${label}`}</p>
+        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg max-w-xs z-50">
+          <p className="font-medium text-gray-800 truncate">{`Partida ${label}`}</p>
           {payload.map((entry: any, index: number) => (
-            <p key={index} className="text-sm" style={{ color: entry.color }}>
+            <p key={index} className="text-sm truncate" style={{ color: entry.color }} title={`${entry.name}: ${isMonetaryIndicator(entry.name) ? formatCurrency(entry.value) : entry.value}`}>
               {`${entry.name}: ${isMonetaryIndicator(entry.name) ? formatCurrency(entry.value) : entry.value}`}
             </p>
           ))}
@@ -356,17 +356,22 @@ export default function StudentGrowth({ students, matchResults, teams = [] }: St
         {getIndicatorIcon(indicator)}
         Evolução de {getIndicatorLabel(indicator)}
       </h3>
-      <div className="h-96">
+      <div className="h-96 w-full overflow-hidden">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data}>
+          <LineChart data={data} margin={{ top: 5, right: 20, left: 20, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="match_number" label={{ value: 'Número da Partida', position: 'insideBottom', offset: -5 }} />
+            <XAxis 
+              dataKey="match_number" 
+              label={{ value: 'Partida', position: 'insideBottom', offset: -5 }}
+              tick={{ fontSize: 12 }}
+            />
             <YAxis 
               label={{ value: `${getIndicatorLabel(indicator)}`, angle: -90, position: 'insideLeft' }}
               tickFormatter={(value) => isMonetaryIndicator(indicator) ? formatCurrency(value) : value}
+              tick={{ fontSize: 12 }}
             />
             <Tooltip content={<CustomTooltip />} />
-            <Legend />
+            <Legend wrapperStyle={{ fontSize: '12px' }} />
             {selectedStudents.map((studentId, index) => {
               const student = students.find(s => s.id === studentId)
               if (!student) return null
@@ -388,11 +393,15 @@ export default function StudentGrowth({ students, matchResults, teams = [] }: St
           <LayoutGrid className="w-4 h-4" />
           Evolução Geral - Todos os Indicadores
         </h3>
-        <div className="h-96">
+        <div className="h-96 w-full overflow-hidden">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data}>
+            <LineChart data={data} margin={{ top: 5, right: 20, left: 20, bottom: 20 }}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="match_number" label={{ value: 'Número da Partida', position: 'insideBottom', offset: -5 }} />
+              <XAxis 
+                dataKey="match_number" 
+                label={{ value: 'Partida', position: 'insideBottom', offset: -5 }}
+                tick={{ fontSize: 12 }}
+              />
               <YAxis 
                 label={{ value: 'Valores', angle: -90, position: 'insideLeft' }}
                 tickFormatter={(value) => {
@@ -400,9 +409,10 @@ export default function StudentGrowth({ students, matchResults, teams = [] }: St
                   // assumindo que valores > 100 são monetários
                   return value > 100 ? formatCurrency(value) : value
                 }}
+                tick={{ fontSize: 12 }}
               />
               <Tooltip content={<CustomTooltip />} />
-              <Legend />
+              <Legend wrapperStyle={{ fontSize: '12px' }} />
               {dataKeys.map((dataKey, index) => {
                 const isAverage = dataKey.includes('Média da Turma')
                 return (
@@ -437,18 +447,22 @@ export default function StudentGrowth({ students, matchResults, teams = [] }: St
         {/* Seletor de Indicador */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-3">Indicador:</label>
-          <div className="flex gap-2 flex-wrap">
-            <button onClick={() => setSelectedIndicator('geral')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${selectedIndicator === 'geral' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
-              <LayoutGrid className="w-4 h-4" /> Geral
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
+            <button onClick={() => setSelectedIndicator('geral')} className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 min-h-[44px] ${selectedIndicator === 'geral' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+              <LayoutGrid className="w-4 h-4 flex-shrink-0" /> 
+              <span className="truncate">Geral</span>
             </button>
-            <button onClick={() => setSelectedIndicator('lucro')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${selectedIndicator === 'lucro' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
-              <TrendingUp className="w-4 h-4" /> Lucro
+            <button onClick={() => setSelectedIndicator('lucro')} className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 min-h-[44px] ${selectedIndicator === 'lucro' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+              <TrendingUp className="w-4 h-4 flex-shrink-0" /> 
+              <span className="truncate">Lucro</span>
             </button>
-            <button onClick={() => setSelectedIndicator('satisfacao')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${selectedIndicator === 'satisfacao' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
-              <Target className="w-4 h-4" /> Satisfação
+            <button onClick={() => setSelectedIndicator('satisfacao')} className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 min-h-[44px] ${selectedIndicator === 'satisfacao' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+              <Target className="w-4 h-4 flex-shrink-0" /> 
+              <span className="truncate">Satisfação</span>
             </button>
-            <button onClick={() => setSelectedIndicator('bonus')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${selectedIndicator === 'bonus' ? 'bg-yellow-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
-              <Trophy className="w-4 h-4" /> Bônus
+            <button onClick={() => setSelectedIndicator('bonus')} className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 min-h-[44px] ${selectedIndicator === 'bonus' ? 'bg-yellow-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+              <Trophy className="w-4 h-4 flex-shrink-0" /> 
+              <span className="truncate">Bônus</span>
             </button>
           </div>
         </div>
@@ -491,7 +505,7 @@ export default function StudentGrowth({ students, matchResults, teams = [] }: St
           {/* Filtros avançados */}
           {showAdvancedFilters && (
             <div className="bg-gray-50 p-4 rounded-lg mb-3 space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">
                     Mínimo de partidas:
@@ -501,7 +515,7 @@ export default function StudentGrowth({ students, matchResults, teams = [] }: St
                     min="0"
                     value={minMatches}
                     onChange={(e) => setMinMatches(Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[44px]"
                   />
                 </div>
                 <div>
@@ -511,7 +525,7 @@ export default function StudentGrowth({ students, matchResults, teams = [] }: St
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as 'name' | 'matches' | 'performance')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[44px]"
                   >
                     <option value="name">Nome</option>
                     <option value="matches">Número de partidas</option>
@@ -535,19 +549,19 @@ export default function StudentGrowth({ students, matchResults, teams = [] }: St
           )}
 
           {/* Lista de alunos filtrados */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-40 overflow-y-auto p-1 border border-gray-200 rounded-lg">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-40 overflow-y-auto p-1 border border-gray-200 rounded-lg">
             {getFilteredAndSortedStudents.map((student) => {
               const stats = getStudentStats(student.id)
               return (
-                <label key={student.id} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
+                <label key={student.id} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer min-h-[44px]">
                   <input
                     type="checkbox"
                     checked={selectedStudents.includes(student.id)}
                     onChange={() => handleStudentToggle(student.id)}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
                   />
                   <div className="flex-1 min-w-0">
-                    <span className="text-sm text-gray-700 truncate block">{student.name}</span>
+                    <span className="text-sm text-gray-700 truncate block max-w-full" title={student.name || ''}>{student.name}</span>
                     <span className="text-xs text-gray-500">
                       {stats.matchCount} partidas
                     </span>
@@ -563,18 +577,18 @@ export default function StudentGrowth({ students, matchResults, teams = [] }: St
           </div>
 
           {/* Controles de seleção */}
-          <div className="flex gap-2 mt-3">
+          <div className="flex flex-wrap gap-2 mt-3">
             <button
               onClick={() => setSelectedStudents(getFilteredAndSortedStudents.map(s => s.id))}
-              className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+              className="px-3 py-2 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors min-h-[36px] flex items-center"
             >
-              Selecionar Todos ({getFilteredAndSortedStudents.length})
+              <span className="truncate">Selecionar Todos ({getFilteredAndSortedStudents.length})</span>
             </button>
             <button
               onClick={() => setSelectedStudents([])}
-              className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+              className="px-3 py-2 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors min-h-[36px] flex items-center"
             >
-              Limpar Seleção
+              <span className="truncate">Limpar Seleção</span>
             </button>
           </div>
           

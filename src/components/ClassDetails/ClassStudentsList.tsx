@@ -132,8 +132,9 @@ export function ClassStudentsList({ students, matchResults = [], itemsPerPage = 
         )}
       </div>
       
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      {/* Desktop Table */}
+      <div className="hidden lg:block overflow-x-auto">
+        <table className="w-full text-sm min-w-[800px]">
           <thead>
             <tr className="border-b border-gray-200">
               <th className="text-left py-3 px-4 font-medium text-gray-700">Aluno</th>
@@ -151,27 +152,29 @@ export function ClassStudentsList({ students, matchResults = [], itemsPerPage = 
               <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50">
                 <td className="py-3 px-4">
                   <div>
-                    <p className="font-medium text-gray-800">{student.name}</p>
+                    <p className="font-medium text-gray-800 truncate max-w-[150px]" title={student.name || ''}>{student.name}</p>
                   </div>
                 </td>
-                <td className="py-3 px-4 text-gray-600">{student.email}</td>
+                <td className="py-3 px-4 text-gray-600">
+                  <span className="truncate max-w-[180px] block" title={student.email || ''}>{student.email}</span>
+                </td>
                 <td className="py-3 px-4 text-gray-600">
                   <div className="flex items-center gap-1">
-                    <Trophy className="w-4 h-4 text-gray-400" />
+                    <Trophy className="w-4 h-4 text-gray-400 flex-shrink-0" />
                     {student.matchesPlayed}
                   </div>
                 </td>
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-1">
-                    <TrendingUp className="w-4 h-4 text-blue-600" />
-                    <span className={`font-medium ${getScoreColor(student.totalLucro)}`}>
+                    <TrendingUp className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                    <span className={`font-medium ${getScoreColor(student.totalLucro)} truncate`}>
                       {formatCurrency(student.totalLucro)}
                     </span>
                   </div>
                 </td>
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-1">
-                    <Target className="w-4 h-4 text-green-600" />
+                    <Target className="w-4 h-4 text-green-600 flex-shrink-0" />
                     <span className={`font-medium ${getScoreColor(student.avgSatisfacao)}`}>
                       {student.avgSatisfacao}%
                     </span>
@@ -179,18 +182,18 @@ export function ClassStudentsList({ students, matchResults = [], itemsPerPage = 
                 </td>
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-1">
-                    <Trophy className="w-4 h-4 text-yellow-600" />
-                    <span className={`font-medium ${getScoreColor(student.totalBonus)}`}>
+                    <Trophy className="w-4 h-4 text-yellow-600 flex-shrink-0" />
+                    <span className={`font-medium ${getScoreColor(student.totalBonus)} truncate`}>
                       {formatCurrency(student.totalBonus)}
                     </span>
                   </div>
                 </td>
                 <td className="py-3 px-4">
-                  <span className={`px-2 py-1 rounded-full text-sm font-medium ${getEngagementBgColor(student.engagement)} ${getEngagementColor(student.engagement)}`}>
+                  <span className={`px-2 py-1 rounded-full text-sm font-medium ${getEngagementBgColor(student.engagement)} ${getEngagementColor(student.engagement)} whitespace-nowrap`}>
                     {student.engagement}%
                   </span>
                 </td>
-                <td className="py-3 px-4 text-gray-600">
+                <td className="py-3 px-4 text-gray-600 whitespace-nowrap">
                   {student.joined_at && format(new Date(student.joined_at), 'dd/MM/yyyy', { locale: ptBR })}
                 </td>
               </tr>
@@ -199,25 +202,79 @@ export function ClassStudentsList({ students, matchResults = [], itemsPerPage = 
         </table>
       </div>
 
+      {/* Mobile Cards */}
+      <div className="lg:hidden space-y-4">
+        {currentStudents.map((student) => (
+          <div key={student.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-medium text-gray-800 truncate" title={student.name || ''}>
+                  {student.name}
+                </h3>
+                <p className="text-sm text-gray-600 truncate" title={student.email || ''}>
+                  {student.email}
+                </p>
+              </div>
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getEngagementBgColor(student.engagement)} ${getEngagementColor(student.engagement)} whitespace-nowrap ml-2`}>
+                {student.engagement}%
+              </span>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <span className="text-gray-600">{student.matchesPlayed} partidas</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                <span className={`font-medium ${getScoreColor(student.totalLucro)} truncate`} title={formatCurrency(student.totalLucro)}>
+                  {formatCurrency(student.totalLucro)}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Target className="w-4 h-4 text-green-600 flex-shrink-0" />
+                <span className={`font-medium ${getScoreColor(student.avgSatisfacao)}`}>
+                  {student.avgSatisfacao}%
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-yellow-600 flex-shrink-0" />
+                <span className={`font-medium ${getScoreColor(student.totalBonus)} truncate`} title={formatCurrency(student.totalBonus)}>
+                  {formatCurrency(student.totalBonus)}
+                </span>
+              </div>
+            </div>
+            
+            {student.joined_at && (
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <span className="text-xs text-gray-500">
+                  Ingressou em: {format(new Date(student.joined_at), 'dd/MM/yyyy', { locale: ptBR })}
+                </span>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
       {/* Controles de Paginação */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
-          <div className="text-sm text-gray-600">
+        <div className="flex flex-col sm:flex-row items-center justify-between mt-6 pt-4 border-t border-gray-200 gap-4">
+          <div className="text-sm text-gray-600 order-2 sm:order-1">
             Mostrando {startIndex + 1} a {Math.min(endIndex, totalItems)} de {totalItems} alunos
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 order-1 sm:order-2 overflow-x-auto">
             <button
               onClick={goToPreviousPage}
               disabled={currentPage === 1}
-              className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+              className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-md transition-colors min-h-[44px] flex-shrink-0 ${
                 currentPage === 1
                   ? 'text-gray-400 cursor-not-allowed'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
               <ChevronLeft className="w-4 h-4" />
-              Anterior
+              <span className="hidden sm:inline">Anterior</span>
             </button>
             
             <div className="flex items-center gap-1">
@@ -226,13 +283,13 @@ export function ClassStudentsList({ students, matchResults = [], itemsPerPage = 
                 if (
                   page === 1 ||
                   page === totalPages ||
-                  (page >= currentPage - 2 && page <= currentPage + 2)
+                  (page >= currentPage - 1 && page <= currentPage + 1)
                 ) {
                   return (
                     <button
                       key={page}
                       onClick={() => goToPage(page)}
-                      className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                      className={`px-3 py-2 text-sm font-medium rounded-md transition-colors min-h-[44px] min-w-[44px] flex-shrink-0 ${
                         page === currentPage
                           ? 'bg-blue-600 text-white'
                           : 'text-gray-700 hover:bg-gray-100'
@@ -242,11 +299,11 @@ export function ClassStudentsList({ students, matchResults = [], itemsPerPage = 
                     </button>
                   )
                 } else if (
-                  page === currentPage - 3 ||
-                  page === currentPage + 3
+                  page === currentPage - 2 ||
+                  page === currentPage + 2
                 ) {
                   return (
-                    <span key={page} className="px-2 py-2 text-gray-400">
+                    <span key={page} className="px-2 py-2 text-gray-400 flex-shrink-0">
                       ...
                     </span>
                   )
@@ -258,13 +315,13 @@ export function ClassStudentsList({ students, matchResults = [], itemsPerPage = 
             <button
               onClick={goToNextPage}
               disabled={currentPage === totalPages}
-              className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+              className={`flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-md transition-colors min-h-[44px] flex-shrink-0 ${
                 currentPage === totalPages
                   ? 'text-gray-400 cursor-not-allowed'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
-              Próxima
+              <span className="hidden sm:inline">Próxima</span>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>

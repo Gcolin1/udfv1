@@ -6,13 +6,7 @@ import {
   ReactNode
 } from 'react'
 import { supabase } from '../lib/supabase'
-
-interface User {
-  id: string
-  email: string
-  name: string
-  role: string
-}
+import { User } from '../types'
 
 interface AuthContextType {
   user: User | null
@@ -36,7 +30,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         data: { session }
       } = await supabase.auth.getSession()
 
-      console.log('[checkSession] Sessão carregada:', session)
 
       if (session && mounted) {
         const supaUser = session.user
@@ -55,8 +48,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('[Auth Event]:', event)
-        console.log('[Auth Session]:', session)
 
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           if (session) {
@@ -83,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password
     })
@@ -91,10 +82,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) {
       console.error('[Login error]', error)
       return false
-    }
-
-    if (data.session) {
-      console.log('[Login success] Sessão:', data.session)
     }
 
     return true
@@ -117,7 +104,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     supabase.auth.signOut()
     setUser(null)
-    console.log('[Logout] Usuário saiu')
   }
 
   return (

@@ -1,5 +1,5 @@
 // src/components/common/FloatingTooltip.tsx
-import React from 'react'
+
 
 interface FloatingTooltipProps {
   isVisible: boolean

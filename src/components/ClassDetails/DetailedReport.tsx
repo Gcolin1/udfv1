@@ -531,23 +531,26 @@ Engajamento da Turma: ${classStats.classEngagement}%
           <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2 mb-4">
             <Users className="w-4 h-4" /> Alunos ({filteredAndSortedStudents.length})
           </h3>
-          <div className="flex flex-col md:flex-row gap-4 mb-4">
-            <div className="relative flex-1">
+          <div className="flex flex-col gap-4 mb-4">
+            <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
                 placeholder="Buscar aluno por nome, email ou time..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px]"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <Filter className="w-5 h-5 text-gray-400" />
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="flex items-center gap-2 text-gray-400">
+                <Filter className="w-5 h-5 flex-shrink-0" />
+                <span className="text-sm font-medium">Filtros:</span>
+              </div>
               <select
                 value={filterBy}
                 onChange={(e) => setFilterBy(e.target.value as 'all' | 'team' | 'individual')}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="flex-1 sm:flex-none px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px]"
               >
                 <option value="all">Todos</option>
                 <option value="team">Com Time</option>
@@ -556,7 +559,7 @@ Engajamento da Turma: ${classStats.classEngagement}%
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as 'name' | 'lucro' | 'satisfacao' | 'bonus' | 'overall')}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="flex-1 sm:flex-none px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px]"
               >
                 <option value="overall">Posição Geral</option>
                 <option value="name">Nome</option>
@@ -567,44 +570,107 @@ Engajamento da Turma: ${classStats.classEngagement}%
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Desktop Table */}
+          <div className="hidden lg:block overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aluno</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Propósito</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lucro Total</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Satisfação Média</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bônus Total</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Posição Geral</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Partidas</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aluno</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Propósito</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lucro Total</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Satisfação Média</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bônus Total</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Posição Geral</th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Partidas</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredAndSortedStudents.map(student => (
                   <tr key={student.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{student.name}</div>
-                      <div className="text-sm text-gray-500">{student.email}</div>
+                    <td className="px-4 py-4">
+                      <div className="text-sm font-medium text-gray-900 truncate max-w-[120px]" title={student.name || ''}>{student.name}</div>
+                      <div className="text-sm text-gray-500 truncate max-w-[150px]" title={student.email || ''}>{student.email}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.teamName || 'N/A'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getPurposeColor(student.purpose)}`}>
+                    <td className="px-4 py-4 text-sm text-gray-900">
+                      <span className="truncate max-w-[100px] block" title={student.teamName || 'N/A'}>{student.teamName || 'N/A'}</span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getPurposeColor(student.purpose)} whitespace-nowrap`}>
                         {getPurposeLabel(student.purpose)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrency(student.totalLucro)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.avgSatisfacao}%</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrency(student.totalBonus)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 flex items-center gap-1">
-                      {getRankIcon(student.overallPosition)} {student.overallPosition}º
+                    <td className="px-4 py-4 text-sm text-gray-900">
+                      <span className="truncate block" title={formatCurrency(student.totalLucro)}>{formatCurrency(student.totalLucro)}</span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.performance.totalMatchesPlayed}</td>
+                    <td className="px-4 py-4 text-sm text-gray-900">{student.avgSatisfacao}%</td>
+                    <td className="px-4 py-4 text-sm text-gray-900">
+                      <span className="truncate block" title={formatCurrency(student.totalBonus)}>{formatCurrency(student.totalBonus)}</span>
+                    </td>
+                    <td className="px-4 py-4 text-sm text-gray-900">
+                      <div className="flex items-center gap-1">
+                        {getRankIcon(student.overallPosition)} 
+                        <span>{student.overallPosition}º</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 text-sm text-gray-900">{student.performance.totalMatchesPlayed}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="lg:hidden space-y-4">
+            {filteredAndSortedStudents.map(student => (
+              <div key={student.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-gray-900 truncate" title={student.name || ''}>
+                      {student.name}
+                    </h4>
+                    <p className="text-sm text-gray-500 truncate" title={student.email || ''}>
+                      {student.email}
+                    </p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Time: <span className="font-medium">{student.teamName || 'N/A'}</span>
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-2 ml-2">
+                    <div className="flex items-center gap-1">
+                      {getRankIcon(student.overallPosition)} 
+                      <span className="text-sm font-medium">{student.overallPosition}º</span>
+                    </div>
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getPurposeColor(student.purpose)} whitespace-nowrap`}>
+                      {getPurposeLabel(student.purpose)}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-gray-500 block">Lucro Total:</span>
+                    <span className="font-medium truncate block" title={formatCurrency(student.totalLucro)}>
+                      {formatCurrency(student.totalLucro)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 block">Satisfação:</span>
+                    <span className="font-medium">{student.avgSatisfacao}%</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 block">Bônus Total:</span>
+                    <span className="font-medium truncate block" title={formatCurrency(student.totalBonus)}>
+                      {formatCurrency(student.totalBonus)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 block">Partidas:</span>
+                    <span className="font-medium">{student.performance.totalMatchesPlayed}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
 
           {showMatchHistory && (
@@ -644,24 +710,33 @@ Engajamento da Turma: ${classStats.classEngagement}%
           <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2 mb-4">
             <Users className="w-4 h-4" /> Times ({teams.length})
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {teams.length === 0 ? (
               <p className="text-gray-600 col-span-full text-center py-4">Nenhum time formado nesta turma.</p>
             ) : (
               teams.map(team => (
                 <div key={team.id} className="border border-gray-200 rounded-lg p-4">
-                  <h4 className="font-semibold text-gray-800 mb-2">{team.name || 'Time sem nome'}</h4>
-                  <p className="text-sm text-gray-600 mb-2">Propósito: <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getPurposeColor(team.group_purpose)}`}>{getPurposeLabel(team.group_purpose)}</span></p>
-                  <p className="text-sm font-medium text-gray-700 mb-1">Membros ({team.members.length}):</p>
-                  <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
+                  <h4 className="font-semibold text-gray-800 mb-2 truncate" title={team.name || 'Time sem nome'}>
+                    {team.name || 'Time sem nome'}
+                  </h4>
+                  <div className="mb-3">
+                    <span className="text-sm text-gray-600">Propósito: </span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getPurposeColor(team.group_purpose)} whitespace-nowrap`}>
+                      {getPurposeLabel(team.group_purpose)}
+                    </span>
+                  </div>
+                  <p className="text-sm font-medium text-gray-700 mb-2">Membros ({team.members.length}):</p>
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
                     {team.members.length === 0 ? (
-                      <li>Nenhum membro</li>
+                      <p className="text-sm text-gray-500 italic">Nenhum membro</p>
                     ) : (
                       team.members.map(member => (
-                        <li key={member.id}>{member.name}</li>
+                        <div key={member.id} className="text-sm text-gray-600 truncate" title={member.name || ''}>
+                          • {member.name}
+                        </div>
                       ))
                     )}
-                  </ul>
+                  </div>
                 </div>
               ))
             )}
@@ -697,29 +772,62 @@ Engajamento da Turma: ${classStats.classEngagement}%
 
           <div>
             <h4 className="font-semibold text-gray-800 mb-3">Métricas de Performance por Aluno</h4>
-            <div className="overflow-x-auto">
+            {/* Desktop Performance Table */}
+            <div className="hidden lg:block overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aluno</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Partidas</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Melhor Score (Lucro+Satisfação+Bônus)</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pior Score (Lucro+Satisfação+Bônus)</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score Médio por Partida</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aluno</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Partidas</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Melhor Score</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pior Score</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score Médio</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {paginatedPerformanceStudents.map(s => (
                     <tr key={s.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{s.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{s.performance.totalMatchesPlayed}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{s.performance.bestMatchScore}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{s.performance.worstMatchScore}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{s.performance.avgMatchScore}</td>
+                      <td className="px-4 py-4 text-sm font-medium text-gray-900">
+                        <span className="truncate block max-w-[150px]" title={s.name || ''}>{s.name}</span>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-900">{s.performance.totalMatchesPlayed}</td>
+                      <td className="px-4 py-4 text-sm text-gray-900">{s.performance.bestMatchScore}</td>
+                      <td className="px-4 py-4 text-sm text-gray-900">{s.performance.worstMatchScore}</td>
+                      <td className="px-4 py-4 text-sm text-gray-900">{s.performance.avgMatchScore}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Performance Cards */}
+            <div className="lg:hidden space-y-4">
+              {paginatedPerformanceStudents.map(s => (
+                <div key={s.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <h4 className="font-medium text-gray-900 mb-3 truncate" title={s.name || ''}>
+                    {s.name}
+                  </h4>
+                  
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-gray-500 block">Partidas:</span>
+                      <span className="font-medium">{s.performance.totalMatchesPlayed}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 block">Score Médio:</span>
+                      <span className="font-medium">{s.performance.avgMatchScore}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 block">Melhor Score:</span>
+                      <span className="font-medium text-green-600">{s.performance.bestMatchScore}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 block">Pior Score:</span>
+                      <span className="font-medium text-red-600">{s.performance.worstMatchScore}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
             
             {totalPerformancePages > 1 && (

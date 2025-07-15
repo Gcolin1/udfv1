@@ -1,32 +1,4 @@
-// Shared utility functions for alert calculations
-// Uses the same logic as the new statusColor calculation
-
-interface Student {
-  id: string
-  name: string | null
-  email: string | null
-  purpose: 'lucro' | 'satisfacao' | 'bonus' | null
-  color: number
-  team_id: string | null
-}
-
-interface MatchResult {
-  player_id: string
-  class_id: string
-  match_number: number
-  lucro: number | null
-  satisfacao: number | null
-  bonus: number | null
-  created_at: string
-}
-
-interface Team {
-  id: string
-  name: string | null
-  group_purpose: 'lucro' | 'satisfacao' | 'bonus' | null
-  class_id: string
-  members: Student[]
-}
+import { Student, MatchResult, Team } from '../types'
 
 interface AlertStudent {
   name: string
@@ -53,7 +25,6 @@ export function calculateStudentAlerts(
   const lowPerformanceStudents: AlertStudent[] = []
   const inactiveStudents: { name: string }[] = []
   
-  // Calculate individual student indicators with the same logic as ClassDetailsPage
   const indicators = students.map(student => {
     const studentResults = matchResults.filter(result => result.player_id === student.id)
 
@@ -69,7 +40,6 @@ export function calculateStudentAlerts(
       team.members.some(member => member.id === student.id)
     )
 
-    // Calculate individual engagement
     const totalUniqueMatches = [...new Set(matchResults.map(r => r.match_number))].length
     const individualEngagement = totalUniqueMatches > 0 
       ? Math.min(100, Math.round((studentResults.length / totalUniqueMatches) * 100))
@@ -88,7 +58,6 @@ export function calculateStudentAlerts(
     }
   })
 
-  // Calculate class averages for relative comparison
   const participatingStudents = indicators.filter(s => s.hasParticipated)
   const classAverages = {
     lucro: participatingStudents.length > 0 ? participatingStudents.reduce((sum, s) => sum + s.totalLucro, 0) / participatingStudents.length : 0,
@@ -96,11 +65,9 @@ export function calculateStudentAlerts(
     bonus: participatingStudents.length > 0 ? participatingStudents.reduce((sum, s) => sum + s.totalBonus, 0) / participatingStudents.length : 0,
   }
 
-  // Calculate status for each student using the new logic
   indicators.forEach(indicator => {
     const purpose = indicator.purpose || indicator.groupPurpose
 
-    // If student hasn't participated, add to inactive
     if (!indicator.hasParticipated) {
       inactiveStudents.push({
         name: indicator.name || 'Sem nome'
@@ -108,7 +75,6 @@ export function calculateStudentAlerts(
       return
     }
 
-    // Calculate relative performance (compared to class average)
     let performancePercentage = 0
     if (purpose && classAverages[purpose] > 0) {
       let currentValue = 0
@@ -126,13 +92,11 @@ export function calculateStudentAlerts(
       performancePercentage = (currentValue / classAverages[purpose]) * 100
     }
 
-    // Combine performance + engagement
-    const engagementWeight = 0.3 // 30% weight for engagement
-    const performanceWeight = 0.7 // 70% weight for performance
+    const engagementWeight = 0.3
+    const performanceWeight = 0.7
     
     const combinedScore = (performancePercentage * performanceWeight) + (indicator.individualEngagement * engagementWeight)
 
-    // Define status based on combined score
     let statusColor: 'green' | 'yellow' | 'red' = 'red'
     if (combinedScore >= 80) {
       statusColor = 'green'
@@ -142,7 +106,6 @@ export function calculateStudentAlerts(
       statusColor = 'red'
     }
 
-    // Add to appropriate alert category
     const alertStudent: AlertStudent = {
       name: indicator.name || 'Sem nome',
       purpose: purpose || 'não definido',
@@ -155,7 +118,6 @@ export function calculateStudentAlerts(
     } else if (statusColor === 'yellow') {
       lowPerformanceStudents.push(alertStudent)
     }
-    // Green students don't need alerts
   })
 
   return {

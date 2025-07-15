@@ -12,3 +12,19 @@ body {
 * {
   box-sizing: border-box;
 }
+
+/* Utilities for better mobile experience */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar { 
+  display: none;  /* Safari and Chrome */
+}
+
+/* Ensure minimum touch target size */
+@media (max-width: 768px) {
+  button, input, select, textarea {
+    min-height: 44px;
+  }
+}
