@@ -1,7 +1,7 @@
 // src/components/ClassDetails/ClassRankingChart.tsx
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Trophy, Crown, ChevronLeft, ChevronRight, Users, UserCheck, TrendingUp, Target } from 'lucide-react'
+import { Trophy, Crown, ChevronLeft, ChevronRight, Users, UserCheck, TrendingUp, Target, Info } from 'lucide-react'
 
 interface RankingData {
   name: string
@@ -68,8 +68,8 @@ export function ClassRankingChart({
     if (!color) return 'Indefinido'
     
     switch (color) {
-      case 'green': return 'Excelente (performance + engajamento)'
-      case 'yellow': return 'Bom (performance ou engajamento mediano)'
+      case 'green': return 'Excelente'
+      case 'yellow': return 'Bom'
       case 'red': return 'Precisa melhorar'
       case 'gray': return 'Não jogou'
       default: return 'Indefinido'
@@ -113,16 +113,19 @@ export function ClassRankingChart({
   return (
     <div className="space-y-6">
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
         <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-2">
           <Trophy className="w-5 h-5 text-yellow-500" />
           Ranking Completo
+          <div className="relative group">
+            <Info className="w-4 h-4 text-gray-400 cursor-help" />
+          </div>
         </h2>
 
         {/* Legenda dos Indicadores de Status */}
-        <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+        <div className="mb-4 p-2 sm:p-3 bg-gray-50 rounded-lg border border-gray-200">
           <h3 className="text-sm font-medium text-gray-700 mb-2">📊 Legenda dos Indicadores de Status:</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
+          <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-green-500 rounded-full flex-shrink-0"></div>
               <span className="text-gray-700">
@@ -154,13 +157,13 @@ export function ClassRankingChart({
         </div>
 
         {/* Abas para alternar entre jogadores e times */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-start gap-2 mb-4 sm:mb-6">
           <button
             onClick={() => {
               setActiveTab('players')
               setPlayersCurrentPage(1)
             }}
-            className={`px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors ${
+            className={`px-3 py-1.5 rounded-md flex items-center gap-2 text-sm font-medium transition-colors w-full sm:w-auto flex-shrink-0 ${
               activeTab === 'players'
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -174,7 +177,7 @@ export function ClassRankingChart({
               setActiveTab('teams')
               setTeamsCurrentPage(1)
             }}
-            className={`px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors ${
+            className={`px-3 py-1.5 rounded-md flex items-center gap-2 text-sm font-medium transition-colors w-full sm:w-auto flex-shrink-0 ${
               activeTab === 'teams'
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'

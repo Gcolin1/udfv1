@@ -26,6 +26,35 @@ export function formatNumber(value: number, decimals: number = 0): string {
   })
 }
 
+export function formatCompactNumber(value: number): string {
+  if (value >= 1000) {
+    return new Intl.NumberFormat('pt-BR', { 
+      notation: 'compact', 
+      compactDisplay: 'short', 
+      maximumFractionDigits: 1 
+    }).format(value)
+  }
+  return new Intl.NumberFormat('pt-BR').format(value)
+}
+
+export function formatCompactCurrency(value: number): string {
+  if (value >= 1000) {
+    return new Intl.NumberFormat('pt-BR', { 
+      style: 'currency', 
+      currency: 'BRL', 
+      notation: 'compact', 
+      compactDisplay: 'short', 
+      maximumFractionDigits: 1 
+    }).format(value)
+  }
+  return new Intl.NumberFormat('pt-BR', { 
+    style: 'currency', 
+    currency: 'BRL', 
+    minimumFractionDigits: 2, 
+    maximumFractionDigits: 2 
+  }).format(value)
+}
+
 export function formatPercentage(value: number, decimals: number = 1): string {
   return `${formatNumber(value, decimals)}%`
 }

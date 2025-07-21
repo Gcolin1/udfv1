@@ -13,6 +13,23 @@ body {
   box-sizing: border-box;
 }
 
+/* Custom breakpoints for better mobile experience */
+/* xs: 320px (small phones) */
+/* sm: 640px (large phones) */
+/* md: 768px (tablets) */
+/* lg: 1024px (small laptops) */
+/* xl: 1280px (large laptops) */
+/* 2xl: 1536px (desktops) */
+
+/* Mobile-first utilities */
+.mobile-padding {
+  padding: 1rem;
+}
+
+.mobile-margin {
+  margin: 0.5rem;
+}
+
 /* Utilities for better mobile experience */
 .scrollbar-hide {
   -ms-overflow-style: none;  /* Internet Explorer 10+ */
@@ -22,9 +39,56 @@ body {
   display: none;  /* Safari and Chrome */
 }
 
+/* Responsive text sizes */
+.text-responsive-xs { font-size: 0.75rem; }
+.text-responsive-sm { font-size: 0.875rem; }
+.text-responsive-base { font-size: 1rem; }
+.text-responsive-lg { font-size: 1.125rem; }
+.text-responsive-xl { font-size: 1.25rem; }
+.text-responsive-2xl { font-size: 1.5rem; }
+
+/* Mobile-specific adjustments */
+@media (max-width: 640px) {
+  /* Smaller text on very small screens */
+  .text-responsive-xs { font-size: 0.6875rem; }
+  .text-responsive-sm { font-size: 0.75rem; }
+  .text-responsive-base { font-size: 0.875rem; }
+  .text-responsive-lg { font-size: 1rem; }
+  .text-responsive-xl { font-size: 1.125rem; }
+  .text-responsive-2xl { font-size: 1.25rem; }
+}
+
 /* Ensure minimum touch target size */
 @media (max-width: 768px) {
-  button, input, select, textarea {
+  button, input, select, textarea, [role="button"] {
     min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Better spacing for mobile */
+  .mobile-container {
+    padding: 0.75rem;
+    margin: 0;
+  }
+  
+  /* Reduce excessive spacing on mobile */
+  .reduce-mobile-spacing {
+    padding: 0.5rem !important;
+    margin: 0.25rem !important;
+  }
+}
+
+/* Ultra-small screens (320px and below) */
+@media (max-width: 320px) {
+  .ultra-small-hide {
+    display: none;
+  }
+  
+  .ultra-small-text {
+    font-size: 0.625rem;
+  }
+  
+  .ultra-small-padding {
+    padding: 0.25rem;
   }
 }

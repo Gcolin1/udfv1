@@ -118,7 +118,7 @@ export function ClassStudentsList({ students, matchResults = [], itemsPerPage = 
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
           <Users className="w-5 h-5" />
@@ -133,7 +133,7 @@ export function ClassStudentsList({ students, matchResults = [], itemsPerPage = 
       </div>
       
       {/* Desktop Table */}
-      <div className="hidden lg:block overflow-x-auto">
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm min-w-[800px]">
           <thead>
             <tr className="border-b border-gray-200">
@@ -203,9 +203,9 @@ export function ClassStudentsList({ students, matchResults = [], itemsPerPage = 
       </div>
 
       {/* Mobile Cards */}
-      <div className="lg:hidden space-y-4">
+      <div className="md:hidden space-y-3">
         {currentStudents.map((student) => (
-          <div key={student.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+          <div key={student.id} className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
             <div className="flex items-start justify-between mb-3">
               <div className="flex-1 min-w-0">
                 <h3 className="font-medium text-gray-800 truncate" title={student.name || ''}>
@@ -220,7 +220,7 @@ export function ClassStudentsList({ students, matchResults = [], itemsPerPage = 
               </span>
             </div>
             
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="grid grid-cols-2 gap-2 sm:gap-3 text-sm">
               <div className="flex items-center gap-2">
                 <Trophy className="w-4 h-4 text-gray-400 flex-shrink-0" />
                 <span className="text-gray-600">{student.matchesPlayed} partidas</span>

@@ -144,7 +144,7 @@ export function ClassDetailsPage() {
 
   return (
     <ErrorBoundary>
-      <div className="p-8">
+      <div className="p-4 sm:p-6 lg:p-8">
         <ClassDetailsHeader 
           classData={classData}
           alertsCount={alertsCount}

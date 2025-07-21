@@ -20,7 +20,7 @@ export function Header({ toggleSidebar }: HeaderProps) {
           >
             <Menu className="w-6 h-6" />
           </button>
-          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center shadow-md flex-shrink-0">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-full flex items-center justify-center shadow-md flex-shrink-0">
             <img src={Logo} alt="logo" className="w-full h-full object-contain" />
           </div>
           <div className="min-w-0 flex-1">

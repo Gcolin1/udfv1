@@ -356,7 +356,7 @@ export default function StudentGrowth({ students, matchResults, teams = [] }: St
         {getIndicatorIcon(indicator)}
         Evolução de {getIndicatorLabel(indicator)}
       </h3>
-      <div className="h-96 w-full overflow-hidden">
+      <div className="h-64 sm:h-80 lg:h-96 w-full overflow-hidden">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 5, right: 20, left: 20, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -393,7 +393,7 @@ export default function StudentGrowth({ students, matchResults, teams = [] }: St
           <LayoutGrid className="w-4 h-4" />
           Evolução Geral - Todos os Indicadores
         </h3>
-        <div className="h-96 w-full overflow-hidden">
+        <div className="h-64 sm:h-80 lg:h-96 w-full overflow-hidden">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 5, right: 20, left: 20, bottom: 20 }}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -438,7 +438,7 @@ export default function StudentGrowth({ students, matchResults, teams = [] }: St
   return (
     <div className="space-y-6">
       {/* Controles */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
         <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-2">
           <TrendingUp className="w-5 h-5 text-blue-600" />
           Crescimento por Aluno
@@ -447,7 +447,7 @@ export default function StudentGrowth({ students, matchResults, teams = [] }: St
         {/* Seletor de Indicador */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-3">Indicador:</label>
-          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
+          <div className="grid grid-cols-1 xs:grid-cols-2 sm:flex sm:flex-wrap gap-2">
             <button onClick={() => setSelectedIndicator('geral')} className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 min-h-[44px] ${selectedIndicator === 'geral' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
               <LayoutGrid className="w-4 h-4 flex-shrink-0" /> 
               <span className="truncate">Geral</span>
@@ -504,8 +504,8 @@ export default function StudentGrowth({ students, matchResults, teams = [] }: St
 
           {/* Filtros avançados */}
           {showAdvancedFilters && (
-            <div className="bg-gray-50 p-4 rounded-lg mb-3 space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-gray-50 p-3 sm:p-4 rounded-lg mb-3 space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">
                     Mínimo de partidas:
@@ -549,7 +549,7 @@ export default function StudentGrowth({ students, matchResults, teams = [] }: St
           )}
 
           {/* Lista de alunos filtrados */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-40 overflow-y-auto p-1 border border-gray-200 rounded-lg">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-32 sm:max-h-40 overflow-y-auto p-1 border border-gray-200 rounded-lg">
             {getFilteredAndSortedStudents.map((student) => {
               const stats = getStudentStats(student.id)
               return (
