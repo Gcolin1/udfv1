@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { PageLoading, ErrorMessage, CustomTooltip } from '../components/ui'
 import { formatCompactNumber, formatNumber } from '../utils/formatters'
+import { BadgeCard } from '@/components/Levels/BadgeCard'
 
 interface StatCardProps {
   icon: typeof Users
@@ -63,6 +64,51 @@ export function DashboardPage() {
     )
   }
 
+  const badges = [
+  {
+    id: 'formador-turmas',
+    title: 'Formador de Turmas',
+    current: stats.classes,
+    stages: [10, 25, 50, 100, 250],
+    unit: 'Turmas',
+  },
+  {
+    id: 'construtor-lideres',
+    title: 'Construtor de Líderes',
+    current: stats.leaders,
+    stages: [10, 25, 50, 100, 250],
+    unit: 'Líderes',
+  },
+  {
+    id: 'mestre-alunos',
+    title: 'Mestre de Alunos',
+    current: stats.students,
+    stages: [10, 25, 50, 100, 250],
+    unit: 'Alunos',
+  },
+  {
+    id: 'fontes-abundantes',
+    title: 'Fontes Abundantes',
+    current: stats.totalProfit,
+    stages: [500, 1500, 2500, 3500, 5000],
+    unit: 'R$',
+  },
+  {
+    id: 'vendedor-nato',
+    title: 'Vendedor Nato',
+    current: stats.packagesSold,
+    stages: [10, 25, 50, 100, 250],
+    unit: 'Pacotes',
+  },
+  {
+    id: 'lider-carismatico',
+    title: 'Líder Carismático',
+    current: stats.engagement,
+    stages: [35, 55, 70, 80, 95],
+    unit: '% de Engajamento',
+  }
+]
+
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gray-50">
@@ -113,6 +159,17 @@ export function DashboardPage() {
                     <h4 className="font-medium mb-1 text-sm sm:text-base">{action.title}</h4>
                     <p className="text-xs sm:text-sm opacity-80">{action.description}</p>
                   </Link>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-xl font-bold text-gray-800 mb-6">
+                Conquistas do Instrutor
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {badges.map((badge) => (
+                  <BadgeCard key={badge.id} badge={badge} />
                 ))}
               </div>
             </div>
