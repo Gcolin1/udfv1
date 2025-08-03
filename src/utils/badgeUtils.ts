@@ -1,4 +1,4 @@
-import { BadgeConfig, BadgeLevel, BadgeProgress, InstructorStats } from '../types/badges'
+import { BadgeConfig, BadgeLevel, BadgeProgress, InstructorStats, BadgeCategory } from '../types/badges'
 
 export const BADGE_CONFIGS: BadgeConfig[] = [
   {
@@ -72,7 +72,7 @@ export function createBadgeCardData(stats: Pick<InstructorStats, 'classes' | 'st
 }
 
 function getUnitForCategory(category: BadgeCategory): string {
-  const units = {
+  const units: Record<BadgeCategory, string> = {
     classes: 'Turmas',
     students: 'Alunos', 
     matches: 'Partidas',
