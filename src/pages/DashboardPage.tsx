@@ -2,12 +2,13 @@
 import { Link } from 'react-router-dom'
 import { Users, Calendar, BookOpen, Activity } from 'lucide-react'
 
-import { useDashboardStats } from '../hooks'
+import { useInstructorStats } from '../hooks/useInstructorStats'
 import { useAuth } from '../contexts/AuthContext'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { PageLoading, ErrorMessage, CustomTooltip } from '../components/ui'
 import { formatCompactNumber, formatNumber } from '../utils/formatters'
 import { BadgeCard } from '@/components/Levels/BadgeCard'
+import { createBadgeCardData } from '../utils/badgeUtils'
 
 interface StatCardProps {
   icon: typeof Users
@@ -38,7 +39,12 @@ function StatCard({ icon: Icon, value, label, color }: StatCardProps) {
 
 export function DashboardPage() {
   const { user } = useAuth()
-  const { stats, isLoading, error, refetch } = useDashboardStats()
+  const { 
+    stats: instructorStats, 
+    isLoading, 
+    error,
+    refetch
+  } = useInstructorStats()
 
   const quickActions = [
     {
@@ -64,50 +70,7 @@ export function DashboardPage() {
     )
   }
 
-  const badges = [
-  {
-    id: 'formador-turmas',
-    title: 'Formador de Turmas',
-    current: stats.classes,
-    stages: [10, 25, 50, 100, 250],
-    unit: 'Turmas',
-  },
-  {
-    id: 'construtor-lideres',
-    title: 'Construtor de Líderes',
-    current: stats.leaders,
-    stages: [10, 25, 50, 100, 250],
-    unit: 'Líderes',
-  },
-  {
-    id: 'mestre-alunos',
-    title: 'Mestre de Alunos',
-    current: stats.students,
-    stages: [10, 25, 50, 100, 250],
-    unit: 'Alunos',
-  },
-  {
-    id: 'fontes-abundantes',
-    title: 'Fontes Abundantes',
-    current: stats.totalProfit,
-    stages: [500, 1500, 2500, 3500, 5000],
-    unit: 'R$',
-  },
-  {
-    id: 'vendedor-nato',
-    title: 'Vendedor Nato',
-    current: stats.packagesSold,
-    stages: [10, 25, 50, 100, 250],
-    unit: 'Pacotes',
-  },
-  {
-    id: 'lider-carismatico',
-    title: 'Líder Carismático',
-    current: stats.engagement,
-    stages: [35, 55, 70, 80, 95],
-    unit: '% de Engajamento',
-  }
-]
+  const badges = createBadgeCardData(instructorStats)
 
   return (
     <ErrorBoundary>
@@ -123,24 +86,30 @@ export function DashboardPage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
               <StatCard 
                 icon={Users} 
-                value={stats.classes} 
-                label="Turmas Ativas" 
+                value={instructorStats.classes} 
+                label="Turmas Criadas" 
                 color="bg-blue-500" 
               />
               <StatCard 
                 icon={BookOpen} 
-                value={stats.students} 
+                value={instructorStats.students} 
                 label="Alunos Total" 
                 color="bg-purple-500" 
               />
               <StatCard 
                 icon={Activity} 
-                value={stats.matches} 
-                label="Partidas Totais" 
+                value={instructorStats.matches} 
+                label="Partidas Realizadas" 
                 color="bg-orange-500" 
+              />
+              <StatCard 
+                icon={Calendar} 
+                value={instructorStats.events} 
+                label="Eventos Organizados" 
+                color="bg-green-500" 
               />
             </div>
 
@@ -165,9 +134,9 @@ export function DashboardPage() {
 
             <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h3 className="text-xl font-bold text-gray-800 mb-6">
-                Conquistas do Instrutor
+                Minhas conquistas
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {badges.map((badge) => (
                   <BadgeCard key={badge.id} badge={badge} />
                 ))}
