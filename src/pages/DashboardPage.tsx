@@ -2,11 +2,13 @@
 import { Link } from 'react-router-dom'
 import { Users, Calendar, BookOpen, Activity } from 'lucide-react'
 
-import { useDashboardStats } from '../hooks'
+import { useInstructorStats } from '../hooks/useInstructorStats'
 import { useAuth } from '../contexts/AuthContext'
 import { ErrorBoundary } from '../components/ErrorBoundary'
-import { PageLoading, ErrorMessage, CustomTooltip } from '../components/ui'
-import { formatCompactNumber, formatNumber } from '../utils/formatters'
+import { PageLoading, ErrorMessage } from '../components/ui'
+import { formatCompactNumber } from '../utils/formatters'
+import { BadgeCard } from '@/components/Levels/BadgeCard'
+import { createBadgeCardData } from '../utils/badgeUtils'
 
 interface StatCardProps {
   icon: typeof Users
@@ -37,7 +39,12 @@ function StatCard({ icon: Icon, value, label, color }: StatCardProps) {
 
 export function DashboardPage() {
   const { user } = useAuth()
-  const { stats, isLoading, error, refetch } = useDashboardStats()
+  const { 
+    stats: instructorStats, 
+    isLoading, 
+    error,
+    refetch
+  } = useInstructorStats()
 
   const quickActions = [
     {
@@ -63,6 +70,8 @@ export function DashboardPage() {
     )
   }
 
+  const badges = createBadgeCardData(instructorStats)
+
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gray-50">
@@ -77,24 +86,30 @@ export function DashboardPage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
               <StatCard 
                 icon={Users} 
-                value={stats.classes} 
-                label="Turmas Ativas" 
+                value={instructorStats.classes} 
+                label="Turmas Criadas" 
                 color="bg-blue-500" 
               />
               <StatCard 
                 icon={BookOpen} 
-                value={stats.students} 
+                value={instructorStats.students} 
                 label="Alunos Total" 
                 color="bg-purple-500" 
               />
               <StatCard 
                 icon={Activity} 
-                value={stats.matches} 
-                label="Partidas Totais" 
+                value={instructorStats.matches} 
+                label="Partidas Realizadas" 
                 color="bg-orange-500" 
+              />
+              <StatCard 
+                icon={Calendar} 
+                value={instructorStats.events} 
+                label="Eventos Organizados" 
+                color="bg-green-500" 
               />
             </div>
 
@@ -113,6 +128,17 @@ export function DashboardPage() {
                     <h4 className="font-medium mb-1 text-sm sm:text-base">{action.title}</h4>
                     <p className="text-xs sm:text-sm opacity-80">{action.description}</p>
                   </Link>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-xl font-bold text-gray-800 mb-6">
+                Minhas conquistas
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {badges.map((badge) => (
+                  <BadgeCard key={badge.id} badge={badge} />
                 ))}
               </div>
             </div>
