@@ -70,7 +70,11 @@ export function DashboardPage() {
     )
   }
 
-  const badges = createBadgeCardData(instructorStats)
+  const allBadges = createBadgeCardData(instructorStats)
+  // Show only "Pioneiro" and "Formador de Turmas" badges on dashboard
+  const dashboardBadges = allBadges.filter(badge => 
+    badge.id === 'pioneiro' || badge.id === 'formador-de-turmas'
+  )
 
   return (
     <ErrorBoundary>
@@ -136,8 +140,8 @@ export function DashboardPage() {
               <h3 className="text-xl font-bold text-gray-800 mb-6">
                 Minhas conquistas
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {badges.map((badge) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {dashboardBadges.map((badge) => (
                   <BadgeCard key={badge.id} badge={badge} />
                 ))}
               </div>

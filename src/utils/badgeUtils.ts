@@ -59,16 +59,36 @@ export interface BadgeCardData {
   current: number
   stages: number[]
   unit: string
+  image?: string
+  description?: string
+}
+
+// Badge image mapping - add your images here
+const BADGE_IMAGES: Record<string, string> = {
+  'formador-de-turmas': '/src/assets/badges/formador-de-turmas.png',
+  'construtor-de-líderes': '/src/assets/badges/construtor-de-lideres.png',
+  'mestre-de-alunos': '/src/assets/badges/mestre-de-alunos.png',
+  'fontes-abundantes': '/src/assets/badges/fontes-abundantes.png',
+  'vendedor-nato': '/src/assets/badges/vendedor-nato.png',
+  'líder-carismático': '/src/assets/badges/lider-carismatico.png',
+  'pioneiro': '/src/assets/badges/pioneiro.png',
+  'turma-top-10': '/src/assets/badges/turma-top-10.png',
+  'turma-top-5': '/src/assets/badges/turma-top-5.png',
+  'turma-top-3': '/src/assets/badges/turma-top-3.png'
 }
 
 export function createBadgeCardData(stats: Pick<InstructorStats, 'classes' | 'students' | 'matches' | 'events' | 'leaders' | 'totalProfit' | 'packagesSold' | 'engagement' | 'pioneerRank' | 'top10Classes' | 'top5Classes' | 'top3Classes'>): BadgeCardData[] {
-  return BADGE_CONFIGS.map(config => ({
-    id: config.name.toLowerCase().replace(/\s+/g, '-'),
-    title: config.name,
-    current: stats[config.category],
-    stages: config.goals,
-    unit: getUnitForCategory(config.category)
-  }))
+  return BADGE_CONFIGS.map(config => {
+    const id = config.name.toLowerCase().replace(/\s+/g, '-')
+    return {
+      id,
+      title: config.name,
+      current: stats[config.category],
+      stages: config.goals,
+      unit: getUnitForCategory(config.category),
+      image: BADGE_IMAGES[id] // Add the corresponding image
+    }
+  })
 }
 
 function getUnitForCategory(category: BadgeCategory): string {
