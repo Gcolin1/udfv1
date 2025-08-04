@@ -77,6 +77,20 @@ const BADGE_IMAGES: Record<string, string> = {
   'turma-top-3': '/src/assets/badges/turma-top-3.png'
 }
 
+// Badge descriptions - explanations for each badge
+const BADGE_DESCRIPTIONS: Record<string, string> = {
+  'formador-de-turmas': 'Conquiste este emblema criando e gerenciando turmas. Demonstre sua capacidade de organizar grupos de alunos e formar comunidades de aprendizado.',
+  'construtor-de-líderes': 'Este emblema é conquistado quando seus alunos se tornam instrutores. Mostre sua habilidade em inspirar e desenvolver futuros líderes.',
+  'mestre-de-alunos': 'Ganhe este emblema ensinando e orientando um grande número de alunos. Demonstre seu alcance e impacto educacional.',
+  'fontes-abundantes': 'Conquiste este emblema gerando lucro através de suas atividades. Mostre sua capacidade de criar valor financeiro.',
+  'vendedor-nato': 'Este emblema é conquistado vendendo pacotes e produtos. Demonstre suas habilidades comerciais e de relacionamento.',
+  'líder-carismático': 'Ganhe este emblema mantendo alto nível de satisfação e engajamento dos alunos. Mostre sua capacidade de inspirar e motivar.',
+  'pioneiro': 'Este emblema especial é concedido aos primeiros instrutores da plataforma. Reconhece quem ajudou a construir a comunidade desde o início.',
+  'turma-top-10': 'Conquiste este emblema tendo turmas entre as 10 melhores por desempenho. Demonstre excelência em gestão e resultados.',
+  'turma-top-5': 'Este emblema é conquistado tendo turmas entre as 5 melhores. Mostre sua capacidade de alcançar resultados excepcionais.',
+  'turma-top-3': 'O emblema mais prestigioso de desempenho, conquistado tendo turmas entre as 3 melhores. Representa a elite dos instrutores.'
+}
+
 export function createBadgeCardData(stats: Pick<InstructorStats, 'classes' | 'students' | 'matches' | 'events' | 'leaders' | 'totalProfit' | 'packagesSold' | 'engagement' | 'pioneerRank' | 'top10Classes' | 'top5Classes' | 'top3Classes'>): BadgeCardData[] {
   return BADGE_CONFIGS.map(config => {
     const id = config.name.toLowerCase().replace(/\s+/g, '-')
@@ -86,7 +100,8 @@ export function createBadgeCardData(stats: Pick<InstructorStats, 'classes' | 'st
       current: stats[config.category],
       stages: config.goals,
       unit: getUnitForCategory(config.category),
-      image: BADGE_IMAGES[id] // Add the corresponding image
+      image: BADGE_IMAGES[id], // Add the corresponding image
+      description: BADGE_DESCRIPTIONS[id] // Add the corresponding description
     }
   })
 }
